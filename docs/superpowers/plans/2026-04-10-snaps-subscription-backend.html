@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snaps 구독 서비스 Java 백엔드 Implementation Plan</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --success: #16a34a;
+    --warning: #ca8a04;
+    --danger: #dc2626;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* Header */
+  .hero { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 48px 32px; }
+  .hero h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+  .hero .meta { font-size: 0.9rem; opacity: 0.8; margin-bottom: 16px; }
+  .hero .goal { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 16px; font-size: 0.95rem; }
+  .hero .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .tag { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.1rem; color: var(--primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* Section headers */
+  .section-header { background: linear-gradient(90deg, var(--primary) 0%, #3b82f6 100%); color: white; border-radius: 10px; padding: 16px 20px; margin: 32px 0 16px; display: flex; align-items: center; gap: 12px; }
+  .section-header .num { background: rgba(255,255,255,0.25); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+  .section-header h2 { font-size: 1.15rem; margin: 0; color: white; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+
+  /* Badges */
+  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-yellow { background: #fef9c3; color: #854d0e; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-gray { background: #f1f5f9; color: #475569; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+
+  /* Task block */
+  .task { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+  .task-header { background: #f8fafc; padding: 14px 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .task-header:hover { background: #f1f5f9; }
+  .task-num { background: var(--primary); color: white; border-radius: 6px; padding: 2px 10px; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+  .task-title { font-weight: 600; flex: 1; }
+  .task-endpoint { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); background: #e2e8f0; padding: 2px 8px; border-radius: 4px; }
+  .task-body { padding: 18px; border-top: 1px solid var(--border); }
+
+  /* Endpoint list */
+  .endpoint { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 8px; font-size: 0.875rem; background: white; }
+  .method { font-family: monospace; font-weight: 700; font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; min-width: 56px; text-align: center; }
+  .method-get { background: #dcfce7; color: #15803d; }
+  .method-post { background: #dbeafe; color: #1d4ed8; }
+  .method-patch { background: #fef9c3; color: #854d0e; }
+  .method-put { background: #ede9fe; color: #6d28d9; }
+  .method-delete { background: #fee2e2; color: #b91c1c; }
+  .path { font-family: monospace; font-weight: 500; color: var(--text); }
+  .desc { color: var(--text-muted); font-size: 0.85rem; margin-left: auto; }
+
+  /* Code block */
+  pre { background: var(--code-bg); color: var(--code-text); border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 0.8rem; line-height: 1.6; margin: 12px 0; }
+  code { font-family: 'Fira Code', 'Cascadia Code', monospace; }
+  .inline-code { background: #f1f5f9; color: #be123c; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
+
+  /* Checklist */
+  .checklist { list-style: none; }
+  .checklist li { padding: 6px 0; display: flex; align-items: flex-start; gap: 10px; border-bottom: 1px solid #f1f5f9; }
+  .checklist li:last-child { border-bottom: none; }
+  .check-box { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+
+  /* Batch table */
+  .batch-item { display: grid; grid-template-columns: 220px 1fr 200px; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); align-items: start; font-size: 0.875rem; }
+  .batch-item:last-child { border-bottom: none; }
+  .batch-name { font-family: monospace; font-weight: 600; color: var(--primary); }
+  .cron { font-family: monospace; font-size: 0.8rem; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569; }
+
+  /* Warning box */
+  .warn-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin-top: 16px; }
+  .warn-box h3 { color: #92400e; font-size: 0.9rem; margin-bottom: 10px; }
+  .warn-box ol { padding-left: 20px; font-size: 0.875rem; color: #78350f; }
+  .warn-box li { margin-bottom: 6px; }
+
+  /* Info box */
+  .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  .info-box p { font-size: 0.875rem; color: #1e40af; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 20px; text-align: center; }
+  .stat .num { font-size: 2rem; font-weight: 700; color: var(--primary); }
+  .stat .label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+  /* Collapse toggle */
+  details summary { list-style: none; cursor: pointer; }
+  details summary::-webkit-details-marker { display: none; }
+  details[open] .chevron { transform: rotate(90deg); }
+  .chevron { transition: transform 0.2s; display: inline-block; }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 1.4rem; }
+    .batch-item { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Snaps 구독 서비스 Java 백엔드 Implementation Plan</h1>
+  <div class="meta">작성일: 2026-04-10 &nbsp;|&nbsp; 버전: v1.0 &nbsp;|&nbsp; 대상: 백엔드 개발팀</div>
+  <div class="goal">
+    <strong>Goal:</strong> 스냅스 월정액 구독 서비스의 Java Spring Boot 백엔드 — 구독/결제/포토북/공유/배송 API와 정기 배치 잡 전체 구현
+  </div>
+  <div class="tags">
+    <span class="tag">Spring Boot 3.x</span>
+    <span class="tag">Spring Batch</span>
+    <span class="tag">Spring Data JPA</span>
+    <span class="tag">MySQL 8</span>
+    <span class="tag">Redis</span>
+    <span class="tag">@Scheduled 폴링</span>
+    <span class="tag">OpenFeign</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><div class="num">18</div><div class="label">총 Task 수</div></div>
+    <div class="stat"><div class="num">28</div><div class="label">API Endpoints</div></div>
+    <div class="stat"><div class="num">7</div><div class="label">배치 잡</div></div>
+    <div class="stat"><div class="num">6</div><div class="label">서브시스템</div></div>
+    <div class="stat"><div class="num">7</div><div class="label">DB 테이블</div></div>
+  </div>
+
+  <div class="info-box">
+    <p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use <code>superpowers:subagent-driven-development</code> (recommended) or <code>superpowers:executing-plans</code> to implement this plan task-by-task.</p>
+  </div>
+
+  <!-- Architecture -->
+  <div class="card">
+    <h2>🏗️ 아키텍처 & 서브시스템</h2>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px;">회원/DB는 스냅스 공유, 서비스 로직은 독립 모듈. Spring Boot 3.x 멀티모듈(domain / api / batch) 구조. 추후 별도 앱 분리 시 최소 수정.</p>
+    <table>
+      <thead><tr><th>순서</th><th>서브시스템</th><th>포함 Task</th><th>우선순위</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Domain &amp; 공통 기반</td><td>Entity, Flyway 스키마, 공통 응답/예외</td><td><span class="badge badge-red">P0</span></td></tr>
+        <tr><td>2</td><td>구독·결제 API</td><td>가입/해지/변경/결제수단</td><td><span class="badge badge-red">P0</span></td></tr>
+        <tr><td>3</td><td>포토북 API</td><td>목록/뷰어/커버커스텀/비회원</td><td><span class="badge badge-red">P0</span></td></tr>
+        <tr><td>4</td><td>공유·수신자 API</td><td>대상자 CRUD/발송이력</td><td><span class="badge badge-blue">P1</span></td></tr>
+        <tr><td>5</td><td>배송 API</td><td>POD 연동/배송현황/어드민</td><td><span class="badge badge-blue">P1</span></td></tr>
+        <tr><td>6</td><td>Spring Batch 잡</td><td>정기결제·생성·발송·발주·상태관리</td><td><span class="badge badge-red">P0</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== SUBSYSTEM 1 ===================== -->
+  <div class="section-header">
+    <div class="num">1</div>
+    <div>
+      <h2>Domain &amp; 공통 기반</h2>
+      <div style="font-size:0.8rem;opacity:0.85;margin-top:2px;">공통 응답 구조 · DB 스키마 · JPA Entity · Repository</div>
+    </div>
+  </div>
+
+  <!-- Task 1 -->
+  <details class="task" open>
+    <summary class="task-header">
+      <span class="task-num">Task 1</span>
+      <span class="task-title">공통 응답 구조 &amp; 예외 처리</span>
+      <span class="task-endpoint">ApiResponse / GlobalExceptionHandler</span>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="task-body">
+      <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:12px;"><strong>Files:</strong> ApiResponse.java · GlobalExceptionHandler.java · SubscriptionException.java</p>
+      <ul class="checklist">
+        <li><span class="check-box"></span><strong>Step 1:</strong> ApiResponseTest.java 테스트 작성 — success/error 케이스</li>
+        <li><span class="check-box"></span><strong>Step 2:</strong> 테스트 실패 확인 (./mvnw test -Dtest=ApiResponseTest)</li>
+        <li><span class="check-box"></span><strong>Step 3:</strong> ApiResponse&lt;T&gt; 구현 (success/error 정적 팩토리)</li>
+        <li><span class="check-box"></span><strong>Step 4:</strong> SubscriptionException 구현 (errorCode + message)</li>
+        <li><span class="check-box"></span><strong>Step 5:</strong> @RestControllerAdvice GlobalExceptionHandler 구현</li>
+        <li><span class="check-box"></span><strong>Step 6:</strong> 테스트 통과 후 커밋</li>
+      </ul>
+      <pre><code>// ApiResponse 구조
+{
+  "code": "SUCCESS",       // 또는 에러코드 (E_ALREADY_SUBSCRIBED 등)
+  "message": null,         // 오류 시 메시지
+  "data": { ... }          // 성공 시 페이로드
+}</code></pre>
+    </div>
+  </details>
+
+  <!-- Task 2 -->
+  <details class="task">
+    <summary class="task-header">
+      <span class="task-num">Task 2</span>
+      <span class="task-title">DB 스키마 (Flyway)</span>
+      <span class="task-endpoint">V1 + V2 Migration</span>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="task-body">
+      <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:12px;"><strong>Files:</strong> V1__subscription_schema.sql · V2__share_delivery_schema.sql</p>
+      <table style="font-size:0.85rem;">
+        <thead><tr><th>테이블</th><th>설명</th><th>주요 컬럼</th></tr></thead>
+        <tbody>
+          <tr><td><span class="inline-code">subscription_plan</span></td><td>요금제 마스터</td><td>plan_code, price, delivery_frequency</td></tr>
+          <tr><td><span class="inline-code">subscription</span></td><td>구독 정보</td><td>member_id, plan_code, status, next_billing_date</td></tr>
+          <tr><td><span class="inline-code">payment_method</span></td><td>결제수단</td><td>pg_type, pg_billing_key, masked_card_no</td></tr>
+          <tr><td><span class="inline-code">payment_history</span></td><td>결제내역</td><td>amount, status, billing_date, retry_count</td></tr>
+          <tr><td><span class="inline-code">photobook</span></td><td>포토북</td><td>status, viewer_url, share_token, target_year_month</td></tr>
+          <tr><td><span class="inline-code">share_recipient</span></td><td>공유 대상자</td><td>nickname, contact_type, notification_enabled</td></tr>
+          <tr><td><span class="inline-code">delivery_order</span></td><td>배송 주문</td><td>order_type, status, pod_order_id, tracking_no</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Task 3 -->
+  <details class="task">
+    <summary class="task-header">
+      <span class="task-num">Task 3</span>
+      <span class="task-title">JPA Entity &amp; Repository 전체</span>
+      <span class="task-endpoint">7개 Entity · Repository</span>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="task-body">
+      <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:12px;">Subscription, PaymentMethod, PaymentHistory, Photobook, PhotobookPage, ShareRecipient, ShareHistory, DeliveryOrder</p>
+      <ul class="checklist">
+        <li><span class="check-box"></span><strong>Step 1:</strong> @DataJpaTest SubscriptionRepositoryTest 작성</li>
+        <li><span class="check-box"></span><strong>Step 2:</strong> Subscription Entity + 도메인 메서드 (cancel/pause/resume/changePlan)</li>
+        <li><span class="check-box"></span><strong>Step 3:</strong> SubscriptionRepository (배치용 쿼리 포함)</li>
+        <li><span class="check-box"></span><strong>Step 4:</strong> PaymentMethod, PaymentHistory Entity</li>
+        <li><span class="check-box"></span><strong>Step 5:</strong> Photobook Entity + updateCover (20자 검증)</li>
+        <li><span class="check-box"></span><strong>Step 6:</strong> ShareRecipient, ShareHistory, DeliveryOrder Entity</li>
+        <li><span class="check-box"></span><strong>Step 7:</strong> 테스트 통과 후 커밋</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- ===================== SUBSYSTEM 2 ===================== -->
+  <div class="section-header">
+    <div class="num">2</div>
+    <div>
+      <h2>구독·결제 API</h2>
+      <div style="font-size:0.8rem;opacity:0.85;margin-top:2px;">구독 가입·해지·변경·일시정지 / 결제수단·결제내역</div>
+    </div>
+  </div>
+
+  <!-- Endpoints: subscription -->
+  <div class="card">
+    <h2>📡 구독 Endpoints</h2>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/subscriptions</span><span class="desc">구독 가입 (결제수단 등록 + 즉시 결제)</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/subscriptions/me</span><span class="desc">내 구독 현황</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/subscriptions/me/dashboard</span><span class="desc">대시보드 종합 (구독+포토북+배송+공유)</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="path">/api/v1/subscriptions/me/plan</span><span class="desc">요금제 변경 (업그레이드 즉시 결제)</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/subscriptions/me/cancel</span><span class="desc">구독 해지 + 리텐션 이벤트 발행</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/subscriptions/me/pause</span><span class="desc">일시정지 (자동 해제일 지정)</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/subscriptions/me/resume</span><span class="desc">일시정지 해제</span></div>
+  </div>
+
+  <div class="card">
+    <h2>💳 결제 Endpoints</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/payments/methods</span><span class="desc">결제수단 조회</span></div>
+    <div class="endpoint"><span class="method method-put">PUT</span><span class="path">/api/v1/payments/methods</span><span class="desc">결제수단 변경 (기존 billing key 삭제 후 신규 등록)</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/payments/history</span><span class="desc">결제내역 (페이징, 월별 정기결제)</span></div>
+  </div>
+
+  <!-- Business Rules -->
+  <div class="card">
+    <h2>⚙️ 비즈니스 규칙</h2>
+    <table style="font-size:0.85rem;">
+      <thead><tr><th>항목</th><th>규칙</th></tr></thead>
+      <tbody>
+        <tr><td>중복 구독</td><td>ACTIVE/PAUSED 구독 존재 시 <span class="badge badge-red">E_ALREADY_SUBSCRIBED</span> 오류</td></tr>
+        <tr><td>첫 결제</td><td>구독 가입 즉시 결제 시도 (FREE_TRIAL 제외)</td></tr>
+        <tr><td>업그레이드</td><td>즉시 적용 + 차액 즉시 결제</td></tr>
+        <tr><td>다운그레이드</td><td>다음 결제일부터 적용</td></tr>
+        <tr><td>해지</td><td>해지 사유 저장 + 리텐션 오퍼 ApplicationEvent 발행 (@Async)</td></tr>
+        <tr><td>결제 실패</td><td>retry_count 3회 초과 → PAYMENT_FAILED 상태</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== SUBSYSTEM 3 ===================== -->
+  <div class="section-header">
+    <div class="num">3</div>
+    <div>
+      <h2>포토북 API</h2>
+      <div style="font-size:0.8rem;opacity:0.85;margin-top:2px;">목록 · 비회원 뷰어 · 커버 커스텀</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📸 포토북 Endpoints</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/photobooks</span><span class="desc">포토북 목록 (월별 타임라인)</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/photobooks/{id}</span><span class="desc">포토북 상세</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="path">/api/v1/photobooks/{id}/cover</span><span class="desc">커버 커스텀 (색상, 텍스트 최대 20자)</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/photobooks/viewer/{shareToken}</span><span class="desc">비회원 뷰어 (로그인 불필요, permitAll)</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/photobooks/{id}/share</span><span class="desc">추가 공유 발송 (대상자 선택)</span></div>
+  </div>
+
+  <div class="card">
+    <h2>🎨 포토북 상태 흐름</h2>
+    <div style="display:flex;align-items:center;gap:8px;font-size:0.9rem;flex-wrap:wrap;">
+      <span class="badge badge-gray">GENERATING</span>
+      <span>→</span>
+      <span class="badge badge-yellow">READY</span>
+      <span>→</span>
+      <span class="badge badge-green">PUBLISHED</span>
+      <span>→</span>
+      <span class="badge badge-red">EXPIRED (12개월)</span>
+    </div>
+    <div style="margin-top:12px;font-size:0.85rem;color:var(--text-muted);">
+      <strong>커버 커스텀 규칙:</strong> PUBLISHED 이전에만 수정 가능 / 텍스트 최대 20자 / 5~6색 팔레트 (크림·네이비·그레이·테라코타·포레스트그린)
+    </div>
+  </div>
+
+  <!-- ===================== SUBSYSTEM 4 ===================== -->
+  <div class="section-header">
+    <div class="num">4</div>
+    <div>
+      <h2>공유·수신자 API</h2>
+      <div style="font-size:0.8rem;opacity:0.85;margin-top:2px;">공유 대상자 CRUD · 발송이력 · 열람 확인</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📨 공유 Endpoints</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/share/recipients</span><span class="desc">공유 대상자 목록</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/share/recipients</span><span class="desc">대상자 추가 (카카오UUID 또는 전화번호)</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="path">/api/v1/share/recipients/{id}</span><span class="desc">별명 변경, 발송 ON/OFF</span></div>
+    <div class="endpoint"><span class="method method-delete">DELETE</span><span class="path">/api/v1/share/recipients/{id}</span><span class="desc">대상자 삭제</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/share/history</span><span class="desc">발송 이력 (수신자별 발송시간·열람·전환)</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/share/history/{id}/read</span><span class="desc">열람 확인 (수신자 웹뷰어에서 호출)</span></div>
+  </div>
+
+  <div class="card">
+    <h2>📬 발송 채널 로직</h2>
+    <table style="font-size:0.85rem;">
+      <thead><tr><th>contact_type</th><th>1차 채널</th><th>실패 시 fallback</th></tr></thead>
+      <tbody>
+        <tr><td>KAKAO</td><td>카카오 알림톡</td><td>SMS</td></tr>
+        <tr><td>PHONE</td><td>SMS</td><td>없음</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== SUBSYSTEM 5 ===================== -->
+  <div class="section-header">
+    <div class="num">5</div>
+    <div>
+      <h2>배송 API</h2>
+      <div style="font-size:0.8rem;opacity:0.85;margin-top:2px;">POD 연동 · 배송현황 스텝퍼 · 수신자 주문 · 어드민</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📦 배송 Endpoints</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/deliveries</span><span class="desc">내 배송 목록</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/deliveries/{id}</span><span class="desc">배송 상세 + 4단계 스텝퍼</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/v1/deliveries/recipient-order</span><span class="desc">수신자 실물 주문 (shareToken 기반)</span></div>
+    <h2 style="margin-top:20px;">🔧 어드민 Endpoints</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/admin/subscriptions</span><span class="desc">구독자 목록 (memberId·status·planCode 검색)</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/admin/subscriptions/{id}</span><span class="desc">구독 상세</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="path">/api/v1/admin/subscriptions/{id}</span><span class="desc">구독 상태 수동 변경</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/v1/admin/deliveries</span><span class="desc">전체 배송 목록</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="path">/api/v1/admin/deliveries/{id}/tracking</span><span class="desc">배송 추적 정보 수동 입력</span></div>
+  </div>
+
+  <div class="card">
+    <h2>🚚 배송 상태 흐름</h2>
+    <div style="display:flex;align-items:center;gap:8px;font-size:0.9rem;flex-wrap:wrap;">
+      <span class="badge badge-gray">PENDING</span><span>→</span>
+      <span class="badge badge-yellow">MANUFACTURING</span><span>→</span>
+      <span class="badge badge-blue">SHIPPING</span><span>→</span>
+      <span class="badge badge-green">DELIVERED</span>
+    </div>
+    <table style="margin-top:16px;font-size:0.85rem;">
+      <thead><tr><th>요금제</th><th>배송 방식</th><th>빈도</th><th>발주 트리거</th></tr></thead>
+      <tbody>
+        <tr><td>라이트 (5,900원)</td><td>미니포토북</td><td>매월</td><td>@Scheduled 매월 1일 12시 DB 폴링</td></tr>
+        <tr><td>시즌 (3,900원)</td><td>미니포토북</td><td>분기 1회</td><td>@Scheduled (3,6,9,12월)</td></tr>
+        <tr><td>디지털 / 무료체험</td><td>실물 없음</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== SUBSYSTEM 6 ===================== -->
+  <div class="section-header">
+    <div class="num">6</div>
+    <div>
+      <h2>Spring Batch 잡</h2>
+      <div style="font-size:0.8rem;opacity:0.85;margin-top:2px;">정기결제 · 포토북생성 · 공유발송 · 실물발주 · 상태관리</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⏰ 배치 잡 전체 목록</h2>
+    <div style="overflow-x:auto;">
+      <div style="min-width:600px;">
+        <div style="display:grid;grid-template-columns:220px 1fr 200px;gap:12px;padding:10px 12px;background:#f1f5f9;border-radius:6px;font-size:0.8rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;">
+          <span>배치 잡</span><span>설명</span><span>스케줄</span>
+        </div>
+        <div class="batch-item">
+          <span class="batch-name">monthlyBillingJob</span>
+          <span>월정액 정기결제 — PG 빌링키로 청구, 실패 시 재시도 카운트, 3회 초과 PAYMENT_FAILED</span>
+          <span><span class="cron">0 0 9 1 * *</span></span>
+        </div>
+        <div class="batch-item">
+          <span class="batch-name">photobookGenerationJob</span>
+          <span>포토북 자동 생성 트리거 — AI 분석 요청, GENERATING 상태 생성, 사진 없으면 SKIP + 알림</span>
+          <span><span class="cron">0 0 10 1 * *</span> DB 폴링</span>
+        </div>
+        <div class="batch-item">
+          <span class="batch-name">shareNotificationJob</span>
+          <span>공유 알림 발송 — status=READY AND 발송이력 없는 포토북 폴링, 카카오/SMS fallback</span>
+          <span><span class="cron">0 0 11 1 * *</span> DB 폴링</span>
+        </div>
+        <div class="batch-item">
+          <span class="batch-name">deliveryOrderJob (라이트)</span>
+          <span>라이트 실물 자동 발주 — 이번 달 AUTO 발주 없는 LIGHT 구독 폴링, POD 발주</span>
+          <span><span class="cron">0 0 12 1 * *</span> DB 폴링</span>
+        </div>
+        <div class="batch-item">
+          <span class="batch-name">deliveryOrderJob (시즌)</span>
+          <span>시즌 분기 실물 발주 — 3/6/9/12월 1일 실행, 이미 발주된 경우 SKIP</span>
+          <span><span class="cron">0 0 9 1 3,6,9,12 *</span></span>
+        </div>
+        <div class="batch-item">
+          <span class="batch-name">deliveryStatusSyncJob</span>
+          <span>POD 배송 상태 동기화 — MANUFACTURING/SHIPPING 주문 polling, 상태 변경 시 푸시 알림</span>
+          <span><span class="cron">0 0 6 * * *</span></span>
+        </div>
+        <div class="batch-item">
+          <span class="batch-name">subscriptionStateJob</span>
+          <span>구독 상태 관리 — 결제실패 재시도(D+1,3,5) · 일시정지 자동해제 · 포토북 만료 처리</span>
+          <span><span class="cron">0 0 7 * * *</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Flow Detail -->
+  <details class="task">
+    <summary class="task-header">
+      <span class="task-num">Task 14</span>
+      <span class="task-title">월정액 정기결제 배치 (monthlyBillingJob)</span>
+      <span class="task-endpoint">ItemReader → Processor → Writer</span>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="task-body">
+      <ul class="checklist">
+        <li><span class="check-box"></span><strong>Step 1:</strong> @SpringBatchTest MonthlyBillingJobTest 작성 (성공/실패 3회 케이스)</li>
+        <li><span class="check-box"></span><strong>Step 2:</strong> BillingItemReader — status=ACTIVE AND next_billing_date &lt;= today 조회</li>
+        <li><span class="check-box"></span><strong>Step 3:</strong> BillingItemProcessor — PG 빌링키로 chargeImmediately 호출, 예외 처리</li>
+        <li><span class="check-box"></span><strong>Step 4:</strong> BillingItemWriter — 성공: payment_history 저장 + next_billing_date +1개월 / 실패: retry_count 확인 → 3회 초과 PAYMENT_FAILED</li>
+        <li><span class="check-box"></span><strong>Step 5:</strong> MonthlyBillingJobConfig — chunk(10), skip(PgException), skipLimit(100)</li>
+        <li><span class="check-box"></span><strong>Step 6:</strong> @Scheduled(cron = "0 0 9 1 * *") BillingJobScheduler 등록</li>
+        <li><span class="check-box"></span><strong>Step 7:</strong> 테스트 통과 후 커밋</li>
+      </ul>
+      <pre><code>// 결제 처리 흐름
+ACTIVE 구독 (next_billing_date <= 오늘)
+  └─ PG 청구 성공 → payment_history(SUCCESS) + next_billing_date += 1개월
+  └─ PG 청구 실패 → payment_history(FAILED) + retry_count++
+       └─ retry_count >= 3 → subscription.status = PAYMENT_FAILED + 알림 발송</code></pre>
+    </div>
+  </details>
+
+  <details class="task">
+    <summary class="task-header">
+      <span class="task-num">Task 15~18</span>
+      <span class="task-title">나머지 배치 잡 (포토북생성·공유발송·실물발주·상태관리)</span>
+      <span class="chevron">▶</span>
+    </summary>
+    <div class="task-body">
+      <ul class="checklist">
+        <li><span class="check-box"></span><strong>Task 15:</strong> PhotobookGenerationProcessor — 이번 달 포토북 존재 시 SKIP, AI 분석 요청, GENERATING 생성</li>
+        <li><span class="check-box"></span><strong>Task 16:</strong> ShareNotificationProcessor — 카카오 알림톡 → 실패 시 SMS fallback → share_history 저장</li>
+        <li><span class="check-box"></span><strong>Task 17:</strong> DeliveryOrderProcessor — 요금제·주기 체크 → POD createOrder → delivery_order 생성 + 일별 상태 동기화</li>
+        <li><span class="check-box"></span><strong>Task 18:</strong> SubscriptionStateJobScheduler — 결제재시도(D+1,3,5) · pause_resume_at 해제 · 12개월 포토북 만료</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- External Integrations -->
+  <div class="card">
+    <h2>🔌 외부 연동 (OpenFeign Client)</h2>
+    <table style="font-size:0.85rem;">
+      <thead><tr><th>Client</th><th>인터페이스</th><th>주요 메서드</th></tr></thead>
+      <tbody>
+        <tr><td>PG사 (TOSS/KCP/INICIS)</td><td><span class="inline-code">PgClient</span></td><td>chargeImmediately, deleteBillingKey</td></tr>
+        <tr><td>카카오 알림톡</td><td><span class="inline-code">KakaoAlimtalkClient</span></td><td>sendAlimtalk(kakaoUUID, title, url)</td></tr>
+        <tr><td>SMS</td><td><span class="inline-code">SmsClient</span></td><td>send(phone, message)</td></tr>
+        <tr><td>AI 분석 엔진</td><td><span class="inline-code">PhotoAnalysisClient</span></td><td>analyzePhotos(memberId, yearMonth)</td></tr>
+        <tr><td>POD 파이프라인</td><td><span class="inline-code">PodClient</span></td><td>createOrder, getOrderStatus</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Internal Events -->
+  <div class="card">
+    <h2>🔔 내부 이벤트 (ApplicationEventPublisher + @Async)</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;">같은 JVM 내 알림성 이벤트만 사용. 배치 간 연쇄는 DB 폴링으로 처리.</p>
+    <table style="font-size:0.85rem;">
+      <thead><tr><th>이벤트 클래스</th><th>발행 시점</th><th>리스너 (@EventListener @Async)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="inline-code">SubscriptionCancelledEvent</span></td><td>구독 해지</td><td>리텐션 오퍼 알림 발송</td></tr>
+        <tr><td><span class="inline-code">BillingFailedEvent</span></td><td>결제 실패 3회 초과</td><td>결제 실패 알림 (카카오/SMS)</td></tr>
+        <tr><td><span class="inline-code">DeliveryStatusChangedEvent</span></td><td>배송 상태 변경 (POD 동기화 시)</td><td>배송 현황 푸시 알림</td></tr>
+        <tr><td><span class="inline-code">PhotobookNoPhotosEvent</span></td><td>사진 없어서 생성 건너뜀</td><td>사진 촬영 유도 알림 발송</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;padding:10px 14px;background:#f0fdf4;border-radius:6px;font-size:0.83rem;color:#166534;">
+      <strong>배치 연쇄 타임라인 (매월 1일):</strong><br>
+      09:00 결제 배치 → 10:00 포토북 생성 배치 (폴링) → 11:00 공유 발송 배치 (폴링) → 12:00 배송 발주 배치 (폴링)
+    </div>
+  </div>
+
+  <!-- Pending Decisions -->
+  <div class="warn-box">
+    <h3>⚠️ 개발 전 확인이 필요한 협의 항목 (6가지)</h3>
+    <ol>
+      <li><strong>정기결제 기준일:</strong> 가입일 기준 (가입일=매월 N일) vs 매월 1일 고정</li>
+      <li><strong>포토북 생성 트리거:</strong> 결제 성공 직후 vs 매월 고정일 vs 사진 N장 누적 시</li>
+      <li><strong>배송 발주 방식:</strong> 자동 발주 vs 고객 최종 확인 후 발주</li>
+      <li><strong>수신자 실물 주문:</strong> 스냅스 계정 없이 비회원 주문 가능 여부</li>
+      <li><strong>결제 실패 재시도:</strong> 재시도 횟수·간격 확정 (제안: D+1, D+3, D+5, 3회 초과 시 정지)</li>
+      <li><strong>무료체험 조건:</strong> 기간·유료 전환 정책 미정, PG사 1차 연동 대상 선택</li>
+    </ol>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;padding:32px 0;color:var(--text-muted);font-size:0.8rem;border-top:1px solid var(--border);margin-top:32px;">
+    Snaps 구독 서비스 Java 백엔드 Implementation Plan &nbsp;·&nbsp; 2026-04-10 &nbsp;·&nbsp; v1.0<br>
+    Generated by Claude Code (superpowers:writing-plans)
+  </div>
+
+</div>
+</body>
+</html>
