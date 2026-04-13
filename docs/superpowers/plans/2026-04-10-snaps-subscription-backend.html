@@ -225,13 +225,13 @@
       <table style="font-size:0.85rem;">
         <thead><tr><th>테이블</th><th>설명</th><th>주요 컬럼</th></tr></thead>
         <tbody>
-          <tr><td><span class="inline-code">subscription_plan</span></td><td>요금제 마스터</td><td>plan_code, price, delivery_frequency</td></tr>
-          <tr><td><span class="inline-code">subscription</span></td><td>구독 정보</td><td>member_id, plan_code, status, next_billing_date</td></tr>
-          <tr><td><span class="inline-code">payment_method</span></td><td>결제수단</td><td>pg_type, pg_billing_key, masked_card_no</td></tr>
-          <tr><td><span class="inline-code">payment_history</span></td><td>결제내역</td><td>amount, status, billing_date, retry_count</td></tr>
-          <tr><td><span class="inline-code">photobook</span></td><td>포토북</td><td>status, viewer_url, share_token, target_year_month</td></tr>
-          <tr><td><span class="inline-code">share_recipient</span></td><td>공유 대상자</td><td>nickname, contact_type, notification_enabled</td></tr>
-          <tr><td><span class="inline-code">delivery_order</span></td><td>배송 주문</td><td>order_type, status, pod_order_id, tracking_no</td></tr>
+          <tr><td><span class="inline-code">t_subscription_plan</span></td><td>요금제 마스터</td><td>f_plan_code, f_price, f_delivery_frequency</td></tr>
+          <tr><td><span class="inline-code">t_subscription</span></td><td>구독 정보</td><td>f_member_id, f_plan_code, f_status, f_next_billing_date</td></tr>
+          <tr><td><span class="inline-code">t_payment_method</span></td><td>결제수단</td><td>f_pg_type, f_pg_billing_key, f_masked_card_no</td></tr>
+          <tr><td><span class="inline-code">t_payment_history</span></td><td>결제내역</td><td>f_amount, f_status, f_billing_date, f_retry_count</td></tr>
+          <tr><td><span class="inline-code">t_photobook</span></td><td>포토북</td><td>f_status, f_viewer_url, f_share_token, f_target_year_month</td></tr>
+          <tr><td><span class="inline-code">t_share_recipient</span></td><td>공유 대상자</td><td>f_nickname, f_contact_type, f_notification_enabled</td></tr>
+          <tr><td><span class="inline-code">t_delivery_order</span></td><td>배송 주문</td><td>f_order_type, f_status, f_pod_order_id, f_tracking_no</td></tr>
         </tbody>
       </table>
     </div>

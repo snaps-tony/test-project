@@ -220,96 +220,96 @@ git commit -m "feat: 공통 API 응답 구조 및 예외 처리 추가"
 ```sql
 -- V1__subscription_schema.sql
 
-CREATE TABLE subscription_plan (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    plan_code   VARCHAR(20) NOT NULL UNIQUE COMMENT 'DIGITAL|LIGHT|SEASON|FREE_TRIAL',
-    name        VARCHAR(50) NOT NULL,
-    price       INT         NOT NULL COMMENT '월 가격(원)',
-    delivery_frequency VARCHAR(20) COMMENT 'MONTHLY|QUARTERLY|NONE',
-    created_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE t_subscription_plan (
+    f_id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_plan_code         VARCHAR(20) NOT NULL UNIQUE COMMENT 'DIGITAL|LIGHT|SEASON|FREE_TRIAL',
+    f_name              VARCHAR(50) NOT NULL,
+    f_price             INT         NOT NULL COMMENT '월 가격(원)',
+    f_delivery_frequency VARCHAR(20) COMMENT 'MONTHLY|QUARTERLY|NONE',
+    f_created_at        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO subscription_plan (plan_code, name, price, delivery_frequency)
+INSERT INTO t_subscription_plan (f_plan_code, f_name, f_price, f_delivery_frequency)
 VALUES
     ('DIGITAL',    '디지털',    2900, 'NONE'),
     ('SEASON',     '시즌',      3900, 'QUARTERLY'),
     ('LIGHT',      '라이트',    5900, 'MONTHLY'),
     ('FREE_TRIAL', '무료체험',  0,    'NONE');
 
-CREATE TABLE subscription (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id           BIGINT      NOT NULL COMMENT '스냅스 회원 ID',
-    plan_code           VARCHAR(20) NOT NULL,
-    status              VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE|PAUSED|CANCELLED|PAYMENT_FAILED',
-    started_at          DATETIME    NOT NULL,
-    next_billing_date   DATE        NOT NULL COMMENT '다음 결제일',
-    next_generation_date DATE       NOT NULL COMMENT '다음 포토북 생성일',
-    paused_at           DATETIME,
-    pause_resume_at     DATE        COMMENT '일시정지 자동 해제일',
-    cancelled_at        DATETIME,
-    cancel_reason       VARCHAR(255),
-    onboarding_cover_type VARCHAR(20) COMMENT 'CLASSIC|MODERN|MINIMAL',
-    created_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_member_id (member_id),
-    INDEX idx_status_next_billing (status, next_billing_date)
+CREATE TABLE t_subscription (
+    f_id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_member_id             BIGINT      NOT NULL COMMENT '스냅스 회원 ID',
+    f_plan_code             VARCHAR(20) NOT NULL,
+    f_status                VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE|PAUSED|CANCELLED|PAYMENT_FAILED',
+    f_started_at            DATETIME    NOT NULL,
+    f_next_billing_date     DATE        NOT NULL COMMENT '다음 결제일',
+    f_next_generation_date  DATE        NOT NULL COMMENT '다음 포토북 생성일',
+    f_paused_at             DATETIME,
+    f_pause_resume_at       DATE        COMMENT '일시정지 자동 해제일',
+    f_cancelled_at          DATETIME,
+    f_cancel_reason         VARCHAR(255),
+    f_onboarding_cover_type VARCHAR(20) COMMENT 'CLASSIC|MODERN|MINIMAL',
+    f_created_at            DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    f_updated_at            DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_member_id (f_member_id),
+    INDEX idx_status_next_billing (f_status, f_next_billing_date)
 );
 
-CREATE TABLE payment_method (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id           BIGINT      NOT NULL,
-    pg_type             VARCHAR(20) NOT NULL COMMENT 'TOSS|KCP|INICIS',
-    pg_billing_key      VARCHAR(200) NOT NULL COMMENT 'PG사 빌링키',
-    masked_card_no      VARCHAR(20),
-    card_company        VARCHAR(30),
-    is_default          TINYINT(1)  NOT NULL DEFAULT 1,
-    created_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_member_id (member_id)
+CREATE TABLE t_payment_method (
+    f_id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_member_id      BIGINT       NOT NULL,
+    f_pg_type        VARCHAR(20)  NOT NULL COMMENT 'TOSS|KCP|INICIS',
+    f_pg_billing_key VARCHAR(200) NOT NULL COMMENT 'PG사 빌링키',
+    f_masked_card_no VARCHAR(20),
+    f_card_company   VARCHAR(30),
+    f_is_default     TINYINT(1)   NOT NULL DEFAULT 1,
+    f_created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_member_id (f_member_id)
 );
 
-CREATE TABLE payment_history (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    subscription_id     BIGINT      NOT NULL,
-    member_id           BIGINT      NOT NULL,
-    amount              INT         NOT NULL,
-    status              VARCHAR(20) NOT NULL COMMENT 'SUCCESS|FAILED|REFUNDED',
-    pg_transaction_id   VARCHAR(100),
-    billing_date        DATE        NOT NULL,
-    fail_reason         VARCHAR(255),
-    retry_count         INT         NOT NULL DEFAULT 0,
-    created_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_subscription_id (subscription_id),
-    INDEX idx_billing_date (billing_date)
+CREATE TABLE t_payment_history (
+    f_id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_subscription_id   BIGINT      NOT NULL,
+    f_member_id         BIGINT      NOT NULL,
+    f_amount            INT         NOT NULL,
+    f_status            VARCHAR(20) NOT NULL COMMENT 'SUCCESS|FAILED|REFUNDED',
+    f_pg_transaction_id VARCHAR(100),
+    f_billing_date      DATE        NOT NULL,
+    f_fail_reason       VARCHAR(255),
+    f_retry_count       INT         NOT NULL DEFAULT 0,
+    f_created_at        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_subscription_id (f_subscription_id),
+    INDEX idx_billing_date (f_billing_date)
 );
 
-CREATE TABLE photobook (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    subscription_id     BIGINT      NOT NULL,
-    member_id           BIGINT      NOT NULL,
-    title               VARCHAR(100),
-    cover_color         VARCHAR(30) COMMENT '커버 색상코드',
-    cover_text          VARCHAR(20) COMMENT '타이틀 최대 20자',
-    cover_date          VARCHAR(20) COMMENT '자동 표기 날짜',
-    status              VARCHAR(20) NOT NULL DEFAULT 'GENERATING' COMMENT 'GENERATING|READY|PUBLISHED|EXPIRED',
-    viewer_url          VARCHAR(500),
-    share_token         VARCHAR(100) UNIQUE COMMENT '비회원 뷰어 토큰',
-    generated_at        DATETIME,
-    published_at        DATETIME,
-    target_year_month   VARCHAR(7)  NOT NULL COMMENT 'YYYY-MM',
-    created_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_subscription_id (subscription_id),
-    INDEX idx_member_id_month (member_id, target_year_month)
+CREATE TABLE t_photobook (
+    f_id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_subscription_id   BIGINT      NOT NULL,
+    f_member_id         BIGINT      NOT NULL,
+    f_title             VARCHAR(100),
+    f_cover_color       VARCHAR(30) COMMENT '커버 색상코드',
+    f_cover_text        VARCHAR(20) COMMENT '타이틀 최대 20자',
+    f_cover_date        VARCHAR(20) COMMENT '자동 표기 날짜',
+    f_status            VARCHAR(20) NOT NULL DEFAULT 'GENERATING' COMMENT 'GENERATING|READY|PUBLISHED|EXPIRED',
+    f_viewer_url        VARCHAR(500),
+    f_share_token       VARCHAR(100) UNIQUE COMMENT '비회원 뷰어 토큰',
+    f_generated_at      DATETIME,
+    f_published_at      DATETIME,
+    f_target_year_month VARCHAR(7)  NOT NULL COMMENT 'YYYY-MM',
+    f_created_at        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    f_updated_at        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_subscription_id (f_subscription_id),
+    INDEX idx_member_id_month (f_member_id, f_target_year_month)
 );
 
-CREATE TABLE photobook_page (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    photobook_id BIGINT     NOT NULL,
-    page_no     INT         NOT NULL,
-    image_url   VARCHAR(500),
-    caption     VARCHAR(200),
-    layout_type VARCHAR(30),
-    INDEX idx_photobook_id (photobook_id)
+CREATE TABLE t_photobook_page (
+    f_id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_photobook_id BIGINT     NOT NULL,
+    f_page_no     INT         NOT NULL,
+    f_image_url   VARCHAR(500),
+    f_caption     VARCHAR(200),
+    f_layout_type VARCHAR(30),
+    INDEX idx_photobook_id (f_photobook_id)
 );
 ```
 
@@ -318,52 +318,52 @@ CREATE TABLE photobook_page (
 ```sql
 -- V2__share_delivery_schema.sql
 
-CREATE TABLE share_recipient (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id           BIGINT      NOT NULL,
-    subscription_id     BIGINT      NOT NULL,
-    nickname            VARCHAR(30) NOT NULL COMMENT '별명',
-    contact_type        VARCHAR(10) NOT NULL COMMENT 'KAKAO|PHONE',
-    contact_value       VARCHAR(50) NOT NULL COMMENT '카카오 UUID 또는 전화번호',
-    notification_enabled TINYINT(1) NOT NULL DEFAULT 1,
-    created_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_member_id (member_id),
-    INDEX idx_subscription_id (subscription_id)
+CREATE TABLE t_share_recipient (
+    f_id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_member_id            BIGINT      NOT NULL,
+    f_subscription_id      BIGINT      NOT NULL,
+    f_nickname             VARCHAR(30) NOT NULL COMMENT '별명',
+    f_contact_type         VARCHAR(10) NOT NULL COMMENT 'KAKAO|PHONE',
+    f_contact_value        VARCHAR(50) NOT NULL COMMENT '카카오 UUID 또는 전화번호',
+    f_notification_enabled TINYINT(1)  NOT NULL DEFAULT 1,
+    f_created_at           DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_member_id (f_member_id),
+    INDEX idx_subscription_id (f_subscription_id)
 );
 
-CREATE TABLE share_history (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    photobook_id    BIGINT      NOT NULL,
-    recipient_id    BIGINT      NOT NULL,
-    channel         VARCHAR(10) NOT NULL COMMENT 'KAKAO|SMS',
-    status          VARCHAR(20) NOT NULL COMMENT 'SENT|FAILED|READ',
-    sent_at         DATETIME,
-    read_at         DATETIME,
-    created_at      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_photobook_id (photobook_id),
-    INDEX idx_recipient_id (recipient_id)
+CREATE TABLE t_share_history (
+    f_id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_photobook_id BIGINT      NOT NULL,
+    f_recipient_id BIGINT      NOT NULL,
+    f_channel      VARCHAR(10) NOT NULL COMMENT 'KAKAO|SMS',
+    f_status       VARCHAR(20) NOT NULL COMMENT 'SENT|FAILED|READ',
+    f_sent_at      DATETIME,
+    f_read_at      DATETIME,
+    f_created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_photobook_id (f_photobook_id),
+    INDEX idx_recipient_id (f_recipient_id)
 );
 
-CREATE TABLE delivery_order (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    subscription_id BIGINT      NOT NULL,
-    member_id       BIGINT      NOT NULL,
-    photobook_id    BIGINT,
-    order_type      VARCHAR(20) NOT NULL COMMENT 'AUTO|RECIPIENT_ORDER|EXTRA',
-    status          VARCHAR(20) NOT NULL DEFAULT 'PENDING'
-                    COMMENT 'PENDING|MANUFACTURING|SHIPPING|DELIVERED|CANCELLED',
-    recipient_name  VARCHAR(50),
-    phone           VARCHAR(20),
-    address         VARCHAR(300),
-    address_detail  VARCHAR(100),
-    zipcode         VARCHAR(10),
-    pod_order_id    VARCHAR(100) COMMENT 'POD 파이프라인 주문번호',
-    tracking_no     VARCHAR(100),
-    courier         VARCHAR(30),
-    ordered_at      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    delivered_at    DATETIME,
-    INDEX idx_subscription_id (subscription_id),
-    INDEX idx_status (status)
+CREATE TABLE t_delivery_order (
+    f_id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    f_subscription_id BIGINT      NOT NULL,
+    f_member_id       BIGINT      NOT NULL,
+    f_photobook_id    BIGINT,
+    f_order_type      VARCHAR(20) NOT NULL COMMENT 'AUTO|RECIPIENT_ORDER|EXTRA',
+    f_status          VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+                      COMMENT 'PENDING|MANUFACTURING|SHIPPING|DELIVERED|CANCELLED',
+    f_recipient_name  VARCHAR(50),
+    f_phone           VARCHAR(20),
+    f_address         VARCHAR(300),
+    f_address_detail  VARCHAR(100),
+    f_zipcode         VARCHAR(10),
+    f_pod_order_id    VARCHAR(100) COMMENT 'POD 파이프라인 주문번호',
+    f_tracking_no     VARCHAR(100),
+    f_courier         VARCHAR(30),
+    f_ordered_at      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    f_delivered_at    DATETIME,
+    INDEX idx_subscription_id (f_subscription_id),
+    INDEX idx_status (f_status)
 );
 ```
 
@@ -440,7 +440,7 @@ class SubscriptionRepositoryTest {
 
 ```java
 @Entity
-@Table(name = "subscription")
+@Table(name = "t_subscription")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
@@ -448,36 +448,43 @@ class SubscriptionRepositoryTest {
 public class Subscription {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "f_id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "f_member_id", nullable = false)
     private Long memberId;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "f_plan_code", nullable = false, length = 20)
     private String planCode;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "f_status", nullable = false, length = 20)
     private SubscriptionStatus status;
 
-    @Column(nullable = false)
+    @Column(name = "f_started_at", nullable = false)
     private LocalDateTime startedAt;
 
-    @Column(nullable = false)
+    @Column(name = "f_next_billing_date", nullable = false)
     private LocalDate nextBillingDate;
 
-    @Column(nullable = false)
+    @Column(name = "f_next_generation_date", nullable = false)
     private LocalDate nextGenerationDate;
 
+    @Column(name = "f_paused_at")
     private LocalDateTime pausedAt;
+    @Column(name = "f_pause_resume_at")
     private LocalDate pauseResumeAt;
+    @Column(name = "f_cancelled_at")
     private LocalDateTime cancelledAt;
+    @Column(name = "f_cancel_reason")
     private String cancelReason;
+    @Column(name = "f_onboarding_cover_type")
     private String onboardingCoverType;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "f_created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "f_updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist
@@ -541,20 +548,28 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
 ```java
 @Entity
-@Table(name = "payment_method")
+@Table(name = "t_payment_method")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 public class PaymentMethod {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "f_id")
     private Long id;
+    @Column(name = "f_member_id")
     private Long memberId;
+    @Column(name = "f_pg_type")
     private String pgType;
+    @Column(name = "f_pg_billing_key")
     private String pgBillingKey;
+    @Column(name = "f_masked_card_no")
     private String maskedCardNo;
+    @Column(name = "f_card_company")
     private String cardCompany;
+    @Column(name = "f_is_default")
     private boolean isDefault;
+    @Column(name = "f_created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -562,23 +577,33 @@ public class PaymentMethod {
 }
 
 @Entity
-@Table(name = "payment_history")
+@Table(name = "t_payment_history")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 public class PaymentHistory {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "f_id")
     private Long id;
+    @Column(name = "f_subscription_id")
     private Long subscriptionId;
+    @Column(name = "f_member_id")
     private Long memberId;
+    @Column(name = "f_amount")
     private int amount;
     @Enumerated(EnumType.STRING)
+    @Column(name = "f_status")
     private PaymentStatus status;    // SUCCESS|FAILED|REFUNDED
+    @Column(name = "f_pg_transaction_id")
     private String pgTransactionId;
+    @Column(name = "f_billing_date")
     private LocalDate billingDate;
+    @Column(name = "f_fail_reason")
     private String failReason;
+    @Column(name = "f_retry_count")
     private int retryCount;
+    @Column(name = "f_created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -590,30 +615,43 @@ public class PaymentHistory {
 
 ```java
 @Entity
-@Table(name = "photobook")
+@Table(name = "t_photobook")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 public class Photobook {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "f_id")
     private Long id;
+    @Column(name = "f_subscription_id")
     private Long subscriptionId;
+    @Column(name = "f_member_id")
     private Long memberId;
+    @Column(name = "f_title")
     private String title;
+    @Column(name = "f_cover_color")
     private String coverColor;
-    @Column(length = 20)
+    @Column(name = "f_cover_text", length = 20)
     private String coverText;
+    @Column(name = "f_cover_date")
     private String coverDate;
     @Enumerated(EnumType.STRING)
+    @Column(name = "f_status")
     private PhotobookStatus status;  // GENERATING|READY|PUBLISHED|EXPIRED
+    @Column(name = "f_viewer_url")
     private String viewerUrl;
-    @Column(unique = true)
+    @Column(name = "f_share_token", unique = true)
     private String shareToken;
+    @Column(name = "f_generated_at")
     private LocalDateTime generatedAt;
+    @Column(name = "f_published_at")
     private LocalDateTime publishedAt;
+    @Column(name = "f_target_year_month")
     private String targetYearMonth;  // YYYY-MM
+    @Column(name = "f_created_at")
     private LocalDateTime createdAt;
+    @Column(name = "f_updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist
@@ -646,20 +684,28 @@ public class Photobook {
 
 ```java
 @Entity
-@Table(name = "share_recipient")
+@Table(name = "t_share_recipient")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 public class ShareRecipient {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "f_id")
     private Long id;
+    @Column(name = "f_member_id")
     private Long memberId;
+    @Column(name = "f_subscription_id")
     private Long subscriptionId;
+    @Column(name = "f_nickname")
     private String nickname;
+    @Column(name = "f_contact_type")
     private String contactType;   // KAKAO|PHONE
+    @Column(name = "f_contact_value")
     private String contactValue;
+    @Column(name = "f_notification_enabled")
     private boolean notificationEnabled;
+    @Column(name = "f_created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -672,21 +718,29 @@ public class ShareRecipient {
 }
 
 @Entity
-@Table(name = "share_history")
+@Table(name = "t_share_history")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 public class ShareHistory {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "f_id")
     private Long id;
+    @Column(name = "f_photobook_id")
     private Long photobookId;
+    @Column(name = "f_recipient_id")
     private Long recipientId;
+    @Column(name = "f_channel")
     private String channel;   // KAKAO|SMS
     @Enumerated(EnumType.STRING)
+    @Column(name = "f_status")
     private ShareStatus status;  // SENT|FAILED|READ
+    @Column(name = "f_sent_at")
     private LocalDateTime sentAt;
+    @Column(name = "f_read_at")
     private LocalDateTime readAt;
+    @Column(name = "f_created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -698,29 +752,45 @@ public class ShareHistory {
 
 ```java
 @Entity
-@Table(name = "delivery_order")
+@Table(name = "t_delivery_order")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 public class DeliveryOrder {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "f_id")
     private Long id;
+    @Column(name = "f_subscription_id")
     private Long subscriptionId;
+    @Column(name = "f_member_id")
     private Long memberId;
+    @Column(name = "f_photobook_id")
     private Long photobookId;
+    @Column(name = "f_order_type")
     private String orderType;      // AUTO|RECIPIENT_ORDER|EXTRA
     @Enumerated(EnumType.STRING)
+    @Column(name = "f_status")
     private DeliveryStatus status; // PENDING|MANUFACTURING|SHIPPING|DELIVERED|CANCELLED
+    @Column(name = "f_recipient_name")
     private String recipientName;
+    @Column(name = "f_phone")
     private String phone;
+    @Column(name = "f_address")
     private String address;
+    @Column(name = "f_address_detail")
     private String addressDetail;
+    @Column(name = "f_zipcode")
     private String zipcode;
+    @Column(name = "f_pod_order_id")
     private String podOrderId;
+    @Column(name = "f_tracking_no")
     private String trackingNo;
+    @Column(name = "f_courier")
     private String courier;
+    @Column(name = "f_ordered_at")
     private LocalDateTime orderedAt;
+    @Column(name = "f_delivered_at")
     private LocalDateTime deliveredAt;
 
     @PrePersist
