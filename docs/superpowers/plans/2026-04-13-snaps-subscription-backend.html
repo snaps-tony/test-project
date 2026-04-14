@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snaps 구독 서비스 API 명세 (구현 현황 2026-04-13)</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --success: #16a34a;
+    --warning: #ca8a04;
+    --danger: #dc2626;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+    --code-key: #93c5fd;
+    --code-str: #a7f3d0;
+    --code-num: #fde68a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 48px 32px; }
+  .hero h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+  .hero .meta { font-size: 0.9rem; opacity: 0.85; margin-bottom: 16px; }
+  .hero .goal { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 16px; font-size: 0.95rem; }
+  .hero .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .tag { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; }
+
+  /* Layout */
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.1rem; color: var(--primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* Section headers */
+  .section-header { background: linear-gradient(90deg, var(--primary) 0%, #3b82f6 100%); color: white; border-radius: 10px; padding: 16px 20px; margin: 32px 0 16px; display: flex; align-items: center; gap: 12px; }
+  .section-header .num { background: rgba(255,255,255,0.25); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+  .section-header h2 { font-size: 1.15rem; margin: 0; color: white; }
+  .section-header .count { margin-left: auto; background: rgba(255,255,255,0.25); padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+
+  /* Status badges */
+  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-yellow { background: #fef9c3; color: #854d0e; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-gray { background: #f1f5f9; color: #475569; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+
+  /* Method badges */
+  .method { font-family: monospace; font-weight: 700; font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; min-width: 60px; text-align: center; display: inline-block; }
+  .method-get { background: #dcfce7; color: #15803d; }
+  .method-post { background: #dbeafe; color: #1d4ed8; }
+  .method-patch { background: #fef9c3; color: #854d0e; }
+  .method-put { background: #ede9fe; color: #6d28d9; }
+  .method-delete { background: #fee2e2; color: #b91c1c; }
+
+  /* API endpoint block */
+  .api { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; background: white; }
+  .api-header { padding: 14px 18px; background: #f8fafc; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .api-header .path { font-family: 'Fira Code', monospace; font-weight: 600; color: var(--text); }
+  .api-header .status-pill { margin-left: auto; }
+  .api-desc { padding: 10px 18px; background: #fafbfc; color: var(--text-muted); font-size: 0.88rem; border-bottom: 1px solid var(--border); }
+  .api-body { padding: 16px 18px; }
+  .api-body h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; margin-top: 12px; }
+  .api-body h4:first-child { margin-top: 0; }
+
+  /* Code block */
+  pre { background: var(--code-bg); color: var(--code-text); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 0.8rem; line-height: 1.55; margin: 6px 0; }
+  code { font-family: 'Fira Code', 'Cascadia Code', monospace; }
+  .inline-code { background: #f1f5f9; color: #be123c; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
+
+  /* JSON syntax */
+  pre .k { color: var(--code-key); }
+  pre .s { color: var(--code-str); }
+  pre .n { color: var(--code-num); }
+  pre .c { color: #94a3b8; font-style: italic; }
+
+  /* Info boxes */
+  .info-box { background: #eff6ff; border-left: 4px solid var(--primary); border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 0.88rem; color: #1e40af; }
+  .warn-box { background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 0.88rem; color: #92400e; }
+  .danger-box { background: #fef2f2; border-left: 4px solid var(--danger); border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 0.88rem; color: #991b1b; }
+  .success-box { background: #f0fdf4; border-left: 4px solid var(--success); border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-size: 0.88rem; color: #166534; }
+
+  /* Progress bar */
+  .progress { background: #e2e8f0; border-radius: 8px; height: 24px; overflow: hidden; position: relative; margin: 8px 0; }
+  .progress-bar { background: linear-gradient(90deg, var(--success) 0%, #22c55e 100%); height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-size: 0.75rem; font-weight: 600; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+  .stat-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+  .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+  .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+  /* Tabs / navigation */
+  .toc { position: sticky; top: 0; background: white; border-bottom: 2px solid var(--border); z-index: 10; padding: 12px 24px; display: flex; gap: 16px; overflow-x: auto; }
+  .toc a { color: var(--text-muted); text-decoration: none; font-size: 0.88rem; font-weight: 500; white-space: nowrap; padding: 4px 8px; border-radius: 4px; }
+  .toc a:hover { background: #f1f5f9; color: var(--primary); }
+
+  /* Enum list */
+  .enum-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .enum-item { font-family: monospace; font-size: 0.8rem; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; color: #475569; }
+
+  /* Header table */
+  .header-tbl td { font-size: 0.83rem; }
+  .header-tbl code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; }
+
+  /* Split layout for request/response */
+  .req-res { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  @media (max-width: 900px) { .req-res { grid-template-columns: 1fr; } }
+  .req-res .label { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div style="max-width:1200px;margin:0 auto;">
+    <h1>📚 Snaps 구독 서비스 API 명세</h1>
+    <div class="meta">Implementation Plan + 실제 구현 현황 · 업데이트: 2026-04-13</div>
+    <div class="goal">
+      스냅스 월정액 구독 서비스 REST API 전체 엔드포인트, 요청/응답 JSON, 에러 코드, 인증 헤더를 한곳에 정리한 개발자 참고 문서입니다.
+      실제 구현은 <strong>snaps-service-api-v2</strong> 프로젝트에 통합되었습니다.
+    </div>
+    <div class="tags">
+      <span class="tag">Java 8</span>
+      <span class="tag">Spring MVC (WAR)</span>
+      <span class="tag">JPA + MyBatis</span>
+      <span class="tag">X-SNAPS-TOKEN 인증</span>
+      <span class="tag">23 구현 / 4 누락 / 7 배치 제외</span>
+    </div>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <a href="#status">📊 구현 현황</a>
+  <a href="#common">🔐 공통 헤더</a>
+  <a href="#errors">⚠️ 에러 코드</a>
+  <a href="#enums">📋 Enum 값</a>
+  <a href="#subscription">① 구독</a>
+  <a href="#payment">② 결제</a>
+  <a href="#photobook">③ 포토북</a>
+  <a href="#share">④ 공유·수신자</a>
+  <a href="#delivery">⑤ 배송</a>
+  <a href="#admin">⑥ 어드민</a>
+  <a href="#missing">❌ 미구현</a>
+  <a href="#next">🎯 다음 단계</a>
+</div>
+
+<div class="container">
+
+<!-- ===== 구현 현황 ===== -->
+<div class="section-header" id="status">
+  <div class="num">📊</div>
+  <h2>구현 현황 요약</h2>
+</div>
+<div class="card">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">23</div><div class="stat-label">구현 완료 API</div></div>
+    <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">미구현 API</div></div>
+    <div class="stat-card"><div class="stat-value">7</div><div class="stat-label">미구현 배치 (제외)</div></div>
+    <div class="stat-card"><div class="stat-value">87</div><div class="stat-label">Java 파일</div></div>
+    <div class="stat-card"><div class="stat-value">10</div><div class="stat-label">DB 테이블</div></div>
+  </div>
+  <h4 style="font-size:0.85rem;color:var(--text-muted);margin-top:16px;margin-bottom:6px;">API 구현 진행률 (27개 중 23개)</h4>
+  <div class="progress"><div class="progress-bar" style="width:85%;">85%</div></div>
+  <table style="margin-top:16px;">
+    <tr><th>구분</th><th>완료</th><th>비고</th></tr>
+    <tr><td>Subsystem 1: 도메인/공통</td><td><span class="badge badge-green">✓ 완료</span></td><td>Entity 9, Enum 5, Repository 8, MyBatis XML 3</td></tr>
+    <tr><td>Subsystem 2: 구독·결제 API</td><td><span class="badge badge-green">✓ 완료</span></td><td>10 API</td></tr>
+    <tr><td>Subsystem 3: 포토북 API</td><td><span class="badge badge-green">✓ 완료</span></td><td>4 API</td></tr>
+    <tr><td>Subsystem 4: 공유·수신자 API</td><td><span class="badge badge-yellow">⚠ 부분</span></td><td>전체 이력 API 1개 누락</td></tr>
+    <tr><td>Subsystem 5: 배송 API</td><td><span class="badge badge-green">✓ 완료</span></td><td>3 API</td></tr>
+    <tr><td>Subsystem 5b: 어드민 API</td><td><span class="badge badge-yellow">⚠ 부분</span></td><td>배송 2 ✓ / 구독 3 ✗, 권한 체크 미구현</td></tr>
+    <tr><td>Subsystem 6: Spring Batch 7잡</td><td><span class="badge badge-red">✗ 전체 제외</span></td><td>별도 프로젝트(snaps-batch) 권장</td></tr>
+  </table>
+</div>
+
+<!-- ===== 공통 헤더 ===== -->
+<div class="section-header" id="common">
+  <div class="num">🔐</div>
+  <h2>공통 요청 헤더</h2>
+</div>
+<div class="card">
+  <p style="margin-bottom:12px;">모든 회원 API 호출 시 아래 헤더가 <strong>필수</strong>입니다. (비회원 뷰어/열람확인/수신자주문 제외)</p>
+  <table class="header-tbl">
+    <tr><th style="width:180px;">Header</th><th style="width:90px;">필수</th><th>설명</th><th>예시</th></tr>
+    <tr><td><code>X-SNAPS-TOKEN</code></td><td><span class="badge badge-red">REQUIRED</span></td><td>JWT 인증 토큰. <code>SessionAdapter.getSessionByChannel()</code> 로 userNo 추출</td><td><code>eyJhbGciOiJIUzI1NiJ9...</code></td></tr>
+    <tr><td><code>X-SNAPS-CHANNEL</code></td><td><span class="badge badge-red">REQUIRED</span></td><td>클라이언트 채널. Framework <code>Channel</code> enum</td><td><code>WEB</code> / <code>APP</code></td></tr>
+    <tr><td><code>X-SNAPS-LANGUAGE</code></td><td><span class="badge badge-gray">optional</span></td><td>로케일 (i18n)</td><td><code>ko-KR</code></td></tr>
+    <tr><td><code>X-SNAPS-COUNTRY</code></td><td><span class="badge badge-gray">optional</span></td><td>국가 코드</td><td><code>KR</code> / <code>JP</code></td></tr>
+    <tr><td><code>X-SNAPS-TRACEUUID</code></td><td><span class="badge badge-gray">optional</span></td><td>요청 추적 ID</td><td><code>uuid-...</code></td></tr>
+    <tr><td><code>Content-Type</code></td><td><span class="badge badge-red">REQUIRED</span></td><td>POST/PATCH/PUT 요청 시</td><td><code>application/json</code></td></tr>
+  </table>
+  <div class="warn-box">
+    <strong>⚠️ 어드민 권한 체크 미구현</strong><br>
+    <code>/v1/admin/subscription/**</code> 경로는 현재 세션만 추출하며 어드민 여부를 검증하지 않습니다. 프로덕션 전 <code>@AdminOnly</code> AOP 추가 필요.
+  </div>
+</div>
+
+<!-- ===== 에러 코드 ===== -->
+<div class="section-header" id="errors">
+  <div class="num">⚠️</div>
+  <h2>구독 서비스 에러 코드 (RtCode)</h2>
+</div>
+<div class="card">
+  <p style="margin-bottom:12px;"><code>SubscriptionException</code> 발생 시 <code>SubscriptionControllerAdvice</code>가 <code>ApiResponseMessage</code> 형식으로 응답합니다.</p>
+  <h4 style="margin-bottom:8px;">에러 응답 포맷</h4>
+  <pre><code>{
+  <span class="k">"errorCode"</span>: <span class="s">"A500S01"</span>,
+  <span class="k">"errorMessage"</span>: <span class="s">"Active subscription not found."</span>,
+  <span class="k">"message"</span>: <span class="s">"활성 구독이 없습니다."</span>
+}</code></pre>
+  <table style="margin-top:12px;">
+    <tr><th>Code</th><th>HTTP</th><th>설명</th></tr>
+    <tr><td><code>A500S00</code></td><td><span class="badge badge-yellow">400</span></td><td>이미 활성 구독이 존재</td></tr>
+    <tr><td><code>A500S01</code></td><td><span class="badge badge-gray">404</span></td><td>활성 구독을 찾을 수 없음</td></tr>
+    <tr><td><code>A500S02</code></td><td><span class="badge badge-yellow">400</span></td><td>구독이 일시정지 상태가 아님 (resume 시)</td></tr>
+    <tr><td><code>A500S03</code></td><td><span class="badge badge-gray">404</span></td><td>결제수단이 등록되지 않음</td></tr>
+    <tr><td><code>A500S04</code></td><td><span class="badge badge-red">500</span></td><td>PG 결제 실패</td></tr>
+    <tr><td><code>A500S05</code></td><td><span class="badge badge-gray">404</span></td><td>포토북을 찾을 수 없음</td></tr>
+    <tr><td><code>A500S06</code></td><td><span class="badge badge-yellow">400</span></td><td>발행된 포토북은 수정 불가</td></tr>
+    <tr><td><code>A500S07</code></td><td><span class="badge badge-yellow">400</span></td><td>커버 텍스트 20자 초과</td></tr>
+    <tr><td><code>A500S08</code></td><td><span class="badge badge-gray">404</span></td><td>공유 대상자를 찾을 수 없음</td></tr>
+    <tr><td><code>A500S09</code></td><td><span class="badge badge-gray">404</span></td><td>배송 주문을 찾을 수 없음</td></tr>
+    <tr><td><code>A500S10</code></td><td><span class="badge badge-gray">404</span></td><td>공유 이력을 찾을 수 없음</td></tr>
+    <tr><td><code>A500S11</code></td><td><span class="badge badge-gray">404</span></td><td>요금제를 찾을 수 없음</td></tr>
+  </table>
+</div>
+
+<!-- ===== Enum 값 ===== -->
+<div class="section-header" id="enums">
+  <div class="num">📋</div>
+  <h2>Enum / 상수 값</h2>
+</div>
+<div class="card">
+  <table>
+    <tr><th style="width:200px;">Enum</th><th>Values</th></tr>
+    <tr><td><code>planCode</code></td><td>
+      <div class="enum-list">
+        <span class="enum-item">DIGITAL (2,900원)</span>
+        <span class="enum-item">SEASON (3,900원 / 분기배송)</span>
+        <span class="enum-item">LIGHT (5,900원 / 월배송)</span>
+        <span class="enum-item">FREE_TRIAL (0원)</span>
+      </div>
+    </td></tr>
+    <tr><td><code>SubscriptionStatus</code></td><td><div class="enum-list">
+      <span class="enum-item">ACTIVE</span><span class="enum-item">PAUSED</span><span class="enum-item">CANCELLED</span><span class="enum-item">PAYMENT_FAILED</span>
+    </div></td></tr>
+    <tr><td><code>PaymentStatus</code></td><td><div class="enum-list">
+      <span class="enum-item">SUCCESS</span><span class="enum-item">FAILED</span><span class="enum-item">REFUNDED</span>
+    </div></td></tr>
+    <tr><td><code>PhotobookStatus</code></td><td><div class="enum-list">
+      <span class="enum-item">GENERATING</span><span class="enum-item">READY</span><span class="enum-item">PUBLISHED</span><span class="enum-item">EXPIRED</span>
+    </div></td></tr>
+    <tr><td><code>ShareStatus</code></td><td><div class="enum-list">
+      <span class="enum-item">SENT</span><span class="enum-item">FAILED</span><span class="enum-item">READ</span>
+    </div></td></tr>
+    <tr><td><code>DeliveryStatus</code></td><td><div class="enum-list">
+      <span class="enum-item">PENDING</span><span class="enum-item">MANUFACTURING</span><span class="enum-item">SHIPPING</span><span class="enum-item">DELIVERED</span><span class="enum-item">CANCELLED</span>
+    </div></td></tr>
+    <tr><td><code>pgType</code></td><td><div class="enum-list">
+      <span class="enum-item">TOSS</span><span class="enum-item">KCP</span><span class="enum-item">INICIS</span>
+    </div></td></tr>
+    <tr><td><code>contactType</code> (공유 수신자)</td><td><div class="enum-list">
+      <span class="enum-item">KAKAO</span><span class="enum-item">PHONE</span>
+    </div></td></tr>
+    <tr><td><code>channel</code> (발송)</td><td><div class="enum-list">
+      <span class="enum-item">KAKAO</span><span class="enum-item">SMS</span>
+    </div></td></tr>
+    <tr><td><code>orderType</code> (배송)</td><td><div class="enum-list">
+      <span class="enum-item">AUTO</span><span class="enum-item">RECIPIENT_ORDER</span><span class="enum-item">EXTRA</span>
+    </div></td></tr>
+    <tr><td><code>onboardingCoverType</code></td><td><div class="enum-list">
+      <span class="enum-item">CLASSIC</span><span class="enum-item">MODERN</span><span class="enum-item">MINIMAL</span>
+    </div></td></tr>
+  </table>
+</div>
+
+<!-- ===== ① 구독 API ===== -->
+<div class="section-header" id="subscription">
+  <div class="num">①</div>
+  <h2>구독 API</h2>
+  <span class="count">7 API · ✅ 완료</span>
+</div>
+
+<!-- 1.1 구독 가입 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">신규 구독 가입. 결제수단 등록 + 구독 생성 + (FREE_TRIAL 제외) 첫 결제 즉시 시도.</div>
+  <div class="api-body">
+    <div class="warn-box">
+      <strong>비즈니스 규칙:</strong> 이미 ACTIVE/PAUSED 상태 구독이 있으면 <code>A500S00</code> 에러 반환
+    </div>
+    <div class="req-res">
+      <div>
+        <div class="label">📥 Request Body</div>
+<pre><code>{
+  <span class="k">"planCode"</span>: <span class="s">"LIGHT"</span>,
+  <span class="k">"pgType"</span>: <span class="s">"TOSS"</span>,
+  <span class="k">"pgBillingKey"</span>: <span class="s">"billing_key_xxx"</span>,
+  <span class="k">"maskedCardNo"</span>: <span class="s">"1234-****-****-5678"</span>,
+  <span class="k">"cardCompany"</span>: <span class="s">"신한"</span>,
+  <span class="k">"onboardingCoverType"</span>: <span class="s">"CLASSIC"</span>
+}</code></pre>
+      </div>
+      <div>
+        <div class="label">📤 Response (200)</div>
+<pre><code>{
+  <span class="k">"subscriptionId"</span>: <span class="n">1</span>,
+  <span class="k">"planCode"</span>: <span class="s">"LIGHT"</span>,
+  <span class="k">"planName"</span>: <span class="s">"라이트"</span>,
+  <span class="k">"status"</span>: <span class="s">"ACTIVE"</span>,
+  <span class="k">"nextBillingDate"</span>: <span class="s">"2026-05-13"</span>,
+  <span class="k">"nextGenerationDate"</span>: <span class="s">"2026-05-13"</span>,
+  <span class="k">"daysUntilNextGeneration"</span>: <span class="n">30</span>
+}</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 1.2 내 구독 현황 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/me</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">내 활성(또는 일시정지) 구독 현황 조회</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"subscriptionId"</span>: <span class="n">1</span>,
+  <span class="k">"planCode"</span>: <span class="s">"LIGHT"</span>,
+  <span class="k">"planName"</span>: <span class="s">"라이트"</span>,
+  <span class="k">"status"</span>: <span class="s">"ACTIVE"</span>,
+  <span class="k">"nextBillingDate"</span>: <span class="s">"2026-05-13"</span>,
+  <span class="k">"nextGenerationDate"</span>: <span class="s">"2026-05-13"</span>,
+  <span class="k">"daysUntilNextGeneration"</span>: <span class="n">30</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 1.3 대시보드 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/me/dashboard</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">대시보드 종합 정보 — 구독 + 최신 포토북 + 최근 배송 + 미열람 공유 수</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"subscription"</span>: {
+    <span class="k">"subscriptionId"</span>: <span class="n">1</span>,
+    <span class="k">"planCode"</span>: <span class="s">"LIGHT"</span>,
+    <span class="k">"planName"</span>: <span class="s">"라이트"</span>,
+    <span class="k">"status"</span>: <span class="s">"ACTIVE"</span>,
+    <span class="k">"nextBillingDate"</span>: <span class="s">"2026-05-13"</span>,
+    <span class="k">"nextGenerationDate"</span>: <span class="s">"2026-05-13"</span>,
+    <span class="k">"daysUntilNextGeneration"</span>: <span class="n">30</span>
+  },
+  <span class="k">"latestPhotobook"</span>: {
+    <span class="k">"photobookId"</span>: <span class="n">10</span>,
+    <span class="k">"targetYearMonth"</span>: <span class="s">"2026-04"</span>,
+    <span class="k">"title"</span>: <span class="s">"4월의 기억"</span>,
+    <span class="k">"thumbnailUrl"</span>: <span class="s">"https://cdn.snaps.com/pb/10/cover.jpg"</span>,
+    <span class="k">"status"</span>: <span class="s">"PUBLISHED"</span>,
+    <span class="k">"publishedAt"</span>: <span class="s">"2026-04-13T09:00:00"</span>
+  },
+  <span class="k">"recentDelivery"</span>: {
+    <span class="k">"deliveryId"</span>: <span class="n">5</span>,
+    <span class="k">"orderType"</span>: <span class="s">"AUTO"</span>,
+    <span class="k">"status"</span>: <span class="s">"SHIPPING"</span>,
+    <span class="k">"trackingNo"</span>: <span class="s">"1234567890"</span>,
+    <span class="k">"courier"</span>: <span class="s">"CJ대한통운"</span>
+  },
+  <span class="k">"unreadShareCount"</span>: <span class="n">0</span>  <span class="c">// 현재 stub — 실제 쿼리 구현 필요</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 1.4 요금제 변경 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-patch">PATCH</span>
+    <span class="path">/v1/subscription/me/plan</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">요금제 변경 — 업그레이드 시 차액 즉시 결제, 다운그레이드는 다음 결제일 적용</div>
+  <div class="api-body">
+    <div class="req-res">
+      <div>
+        <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"planCode"</span>: <span class="s">"SEASON"</span>
+}</code></pre>
+      </div>
+      <div>
+        <div class="label">📤 Response</div>
+<pre><code><span class="c">// 200 OK, body 없음</span></code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 1.5 해지 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription/me/cancel</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">구독 해지</div>
+  <div class="api-body">
+    <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"cancelReason"</span>: <span class="s">"가격이 부담돼요"</span>
+}</code></pre>
+    <div class="info-box">리텐션 오퍼 이벤트 발행은 추후 이벤트 시스템 연동 시 추가 예정</div>
+  </div>
+</div>
+
+<!-- 1.6 일시정지 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription/me/pause</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">일시정지 — 자동 해제일 지정</div>
+  <div class="api-body">
+    <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"pauseResumeAt"</span>: <span class="s">"2026-07-01"</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 1.7 재개 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription/me/resume</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">일시정지 구독 재개 (Body 없음)</div>
+  <div class="api-body">
+    <div class="warn-box">PAUSED 상태가 아니면 <code>A500S02</code> 에러 반환</div>
+  </div>
+</div>
+
+<!-- ===== ② 결제 API ===== -->
+<div class="section-header" id="payment">
+  <div class="num">②</div>
+  <h2>결제 API</h2>
+  <span class="count">3 API · ✅ 완료</span>
+</div>
+
+<!-- 2.1 결제수단 조회 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/payment/methods</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">등록된 기본 결제수단 조회</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"maskedCardNo"</span>: <span class="s">"1234-****-****-5678"</span>,
+  <span class="k">"cardCompany"</span>: <span class="s">"신한"</span>,
+  <span class="k">"pgType"</span>: <span class="s">"TOSS"</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 2.2 결제수단 변경 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-put">PUT</span>
+    <span class="path">/v1/subscription/payment/methods</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">결제수단 교체 (기존 billing key 삭제 → 신규 저장)</div>
+  <div class="api-body">
+    <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"pgType"</span>: <span class="s">"TOSS"</span>,
+  <span class="k">"pgBillingKey"</span>: <span class="s">"billing_new_xxx"</span>,
+  <span class="k">"maskedCardNo"</span>: <span class="s">"9999-****-****-1111"</span>,
+  <span class="k">"cardCompany"</span>: <span class="s">"KB"</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 2.3 결제 내역 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/payment/history?page=0&size=20</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">결제 내역 (페이징)</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"content"</span>: [
+    {
+      <span class="k">"paymentId"</span>: <span class="n">1</span>,
+      <span class="k">"amount"</span>: <span class="n">5900</span>,
+      <span class="k">"status"</span>: <span class="s">"SUCCESS"</span>,
+      <span class="k">"billingDate"</span>: <span class="s">"2026-04-13"</span>,
+      <span class="k">"pgTransactionId"</span>: <span class="s">"STUB_TXN_abc123"</span>
+    },
+    {
+      <span class="k">"paymentId"</span>: <span class="n">2</span>,
+      <span class="k">"amount"</span>: <span class="n">5900</span>,
+      <span class="k">"status"</span>: <span class="s">"FAILED"</span>,
+      <span class="k">"billingDate"</span>: <span class="s">"2026-03-10"</span>,
+      <span class="k">"pgTransactionId"</span>: <span class="s">null</span>
+    }
+  ],
+  <span class="k">"page"</span>: <span class="n">0</span>,
+  <span class="k">"size"</span>: <span class="n">20</span>,
+  <span class="k">"totalElements"</span>: <span class="n">5</span>
+}</code></pre>
+    <div class="warn-box"><code>totalElements</code>는 현재 페이지 크기 기준 반환 — 별도 count 쿼리 추가 필요</div>
+  </div>
+</div>
+
+<!-- ===== ③ 포토북 API ===== -->
+<div class="section-header" id="photobook">
+  <div class="num">③</div>
+  <h2>포토북 API</h2>
+  <span class="count">4 API · ✅ 완료</span>
+</div>
+
+<!-- 3.1 포토북 목록 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/photobook</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">내 포토북 목록 (월별 타임라인 내림차순)</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>[
+  {
+    <span class="k">"photobookId"</span>: <span class="n">10</span>,
+    <span class="k">"targetYearMonth"</span>: <span class="s">"2026-04"</span>,
+    <span class="k">"title"</span>: <span class="s">"4월의 기억"</span>,
+    <span class="k">"thumbnailUrl"</span>: <span class="s">"https://cdn.snaps.com/pb/10/cover.jpg"</span>,
+    <span class="k">"status"</span>: <span class="s">"PUBLISHED"</span>,
+    <span class="k">"publishedAt"</span>: <span class="s">"2026-04-13T09:00:00"</span>
+  },
+  {
+    <span class="k">"photobookId"</span>: <span class="n">9</span>,
+    <span class="k">"targetYearMonth"</span>: <span class="s">"2026-03"</span>,
+    <span class="k">"title"</span>: <span class="s">"3월의 기억"</span>,
+    <span class="k">"thumbnailUrl"</span>: <span class="s">"https://cdn.snaps.com/pb/9/cover.jpg"</span>,
+    <span class="k">"status"</span>: <span class="s">"PUBLISHED"</span>,
+    <span class="k">"publishedAt"</span>: <span class="s">"2026-03-10T09:00:00"</span>
+  }
+]</code></pre>
+  </div>
+</div>
+
+<!-- 3.2 포토북 상세 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/photobook/{id}</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">포토북 상세 조회 (회원 본인만)</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"photobookId"</span>: <span class="n">10</span>,
+  <span class="k">"title"</span>: <span class="s">"4월의 기억"</span>,
+  <span class="k">"coverColor"</span>: <span class="s">"#F5F0E8"</span>,
+  <span class="k">"coverText"</span>: <span class="s">"우리 가족의 4월"</span>,
+  <span class="k">"pages"</span>: [
+    { <span class="k">"pageNo"</span>: <span class="n">1</span>, <span class="k">"imageUrl"</span>: <span class="s">"https://cdn.snaps.com/pb/10/p1.jpg"</span>, <span class="k">"caption"</span>: <span class="s">"우리 가족"</span> },
+    { <span class="k">"pageNo"</span>: <span class="n">2</span>, <span class="k">"imageUrl"</span>: <span class="s">"https://cdn.snaps.com/pb/10/p2.jpg"</span>, <span class="k">"caption"</span>: <span class="s">"봄 나들이"</span> }
+  ],
+  <span class="k">"canOrderPhysical"</span>: <span class="n">false</span>,
+  <span class="k">"physicalOrderUrl"</span>: <span class="s">null</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 3.3 비회원 뷰어 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/photobook/viewer/{shareToken}</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc"><strong>비회원 인증 불필요</strong> — shareToken 으로 포토북 뷰어 접근. 수신자는 실물 주문 가능.</div>
+  <div class="api-body">
+    <div class="success-box">인증 헤더 불필요. 비회원도 접근 가능.</div>
+    <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"photobookId"</span>: <span class="n">10</span>,
+  <span class="k">"title"</span>: <span class="s">"4월의 기억"</span>,
+  <span class="k">"coverColor"</span>: <span class="s">"#F5F0E8"</span>,
+  <span class="k">"coverText"</span>: <span class="s">"우리 가족의 4월"</span>,
+  <span class="k">"pages"</span>: [
+    { <span class="k">"pageNo"</span>: <span class="n">1</span>, <span class="k">"imageUrl"</span>: <span class="s">"https://..."</span>, <span class="k">"caption"</span>: <span class="s">"..."</span> }
+  ],
+  <span class="k">"canOrderPhysical"</span>: <span class="n">true</span>,
+  <span class="k">"physicalOrderUrl"</span>: <span class="s">"/v1/subscription/delivery/recipient-order"</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 3.4 커버 커스텀 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-patch">PATCH</span>
+    <span class="path">/v1/subscription/photobook/{id}/cover</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">포토북 커버 커스텀 — PUBLISHED 상태는 수정 불가</div>
+  <div class="api-body">
+    <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"coverColor"</span>: <span class="s">"#F5F0E8"</span>,
+  <span class="k">"coverText"</span>: <span class="s">"우리 가족의 4월"</span>  <span class="c">// 최대 20자 (초과 시 A500S07)</span>
+}</code></pre>
+    <div class="warn-box">
+      • 본인 포토북 아니면 <code>A500S05</code><br>
+      • PUBLISHED 상태면 <code>A500S06</code><br>
+      • coverText 20자 초과 시 <code>A500S07</code>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ④ 공유·수신자 API ===== -->
+<div class="section-header" id="share">
+  <div class="num">④</div>
+  <h2>공유·수신자 API</h2>
+  <span class="count">6 API · ⚠️ 1개 누락</span>
+</div>
+
+<!-- 4.1 대상자 목록 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/share/recipients</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">공유 대상자 전체 목록</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>[
+  {
+    <span class="k">"recipientId"</span>: <span class="n">1</span>,
+    <span class="k">"nickname"</span>: <span class="s">"엄마"</span>,
+    <span class="k">"contactType"</span>: <span class="s">"KAKAO"</span>,
+    <span class="k">"notificationEnabled"</span>: <span class="n">true</span>
+  },
+  {
+    <span class="k">"recipientId"</span>: <span class="n">2</span>,
+    <span class="k">"nickname"</span>: <span class="s">"할머니"</span>,
+    <span class="k">"contactType"</span>: <span class="s">"PHONE"</span>,
+    <span class="k">"notificationEnabled"</span>: <span class="n">true</span>
+  }
+]</code></pre>
+  </div>
+</div>
+
+<!-- 4.2 대상자 추가 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription/share/recipients</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">대상자 추가 — 활성 구독 필요</div>
+  <div class="api-body">
+    <div class="req-res">
+      <div>
+        <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"nickname"</span>: <span class="s">"엄마"</span>,
+  <span class="k">"contactType"</span>: <span class="s">"KAKAO"</span>,
+  <span class="k">"contactValue"</span>: <span class="s">"kakao_uuid_xxx"</span>,
+  <span class="k">"notificationEnabled"</span>: <span class="n">true</span>
+}</code></pre>
+      </div>
+      <div>
+        <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"recipientId"</span>: <span class="n">1</span>,
+  <span class="k">"nickname"</span>: <span class="s">"엄마"</span>,
+  <span class="k">"contactType"</span>: <span class="s">"KAKAO"</span>,
+  <span class="k">"notificationEnabled"</span>: <span class="n">true</span>
+}</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4.3 대상자 수정 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-patch">PATCH</span>
+    <span class="path">/v1/subscription/share/recipients/{id}</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">별명 / 발송 ON/OFF 토글</div>
+  <div class="api-body">
+    <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"nickname"</span>: <span class="s">"엄마♡"</span>,
+  <span class="k">"notificationEnabled"</span>: <span class="n">false</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- 4.4 대상자 삭제 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-delete">DELETE</span>
+    <span class="path">/v1/subscription/share/recipients/{id}</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">대상자 삭제 (Body 없음, 200 OK)</div>
+</div>
+
+<!-- 4.5 포토북별 발송 이력 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/share/photobook/{photobookId}/history</span>
+    <span class="status-pill badge badge-purple">✅ 구현 (플랜엔 없는 추가 API)</span>
+  </div>
+  <div class="api-desc">특정 포토북의 공유 발송 이력</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>[
+  {
+    <span class="k">"historyId"</span>: <span class="n">1</span>,
+    <span class="k">"photobookId"</span>: <span class="n">10</span>,
+    <span class="k">"channel"</span>: <span class="s">"KAKAO"</span>,
+    <span class="k">"status"</span>: <span class="s">"READ"</span>,
+    <span class="k">"sentAt"</span>: <span class="s">"2026-04-13T09:05:00"</span>,
+    <span class="k">"readAt"</span>: <span class="s">"2026-04-13T15:20:30"</span>
+  },
+  {
+    <span class="k">"historyId"</span>: <span class="n">2</span>,
+    <span class="k">"photobookId"</span>: <span class="n">10</span>,
+    <span class="k">"channel"</span>: <span class="s">"SMS"</span>,
+    <span class="k">"status"</span>: <span class="s">"SENT"</span>,
+    <span class="k">"sentAt"</span>: <span class="s">"2026-04-13T09:05:10"</span>,
+    <span class="k">"readAt"</span>: <span class="s">null</span>
+  }
+]</code></pre>
+  </div>
+</div>
+
+<!-- 4.6 추가 공유 발송 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription/share/photobook/{photobookId}/send</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">회원이 특정 포토북을 추가 공유 발송 (플랜 경로: <code>/photobooks/{id}/share</code>)</div>
+  <div class="api-body">
+    <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"channel"</span>: <span class="s">"KAKAO"</span>,
+  <span class="k">"recipientIds"</span>: [<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]
+}</code></pre>
+    <div class="info-box">각 수신자마다 <code>SubscriptionNotificationAdapter.sendShareNotification()</code> 호출 + <code>ShareHistory</code> 저장 (status=SENT)</div>
+  </div>
+</div>
+
+<!-- 4.7 열람 확인 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription/share/history/{id}/read</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc"><strong>비회원 인증 불필요</strong> — 수신자 웹뷰어에서 열람 시 호출. <code>ShareStatus</code> SENT→READ, <code>readAt</code> 기록</div>
+  <div class="api-body">
+    <div class="success-box">인증 헤더 불필요. Body 없음.</div>
+  </div>
+</div>
+
+<!-- ===== ⑤ 배송 API ===== -->
+<div class="section-header" id="delivery">
+  <div class="num">⑤</div>
+  <h2>배송 API</h2>
+  <span class="count">3 API · ✅ 완료</span>
+</div>
+
+<!-- 5.1 내 배송 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/delivery</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">내 배송 목록 (주문일 내림차순)</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>[
+  {
+    <span class="k">"deliveryId"</span>: <span class="n">5</span>,
+    <span class="k">"orderType"</span>: <span class="s">"AUTO"</span>,
+    <span class="k">"status"</span>: <span class="s">"SHIPPING"</span>,
+    <span class="k">"trackingNo"</span>: <span class="s">"1234567890"</span>,
+    <span class="k">"courier"</span>: <span class="s">"CJ대한통운"</span>
+  },
+  {
+    <span class="k">"deliveryId"</span>: <span class="n">4</span>,
+    <span class="k">"orderType"</span>: <span class="s">"RECIPIENT_ORDER"</span>,
+    <span class="k">"status"</span>: <span class="s">"DELIVERED"</span>,
+    <span class="k">"trackingNo"</span>: <span class="s">"9876543210"</span>,
+    <span class="k">"courier"</span>: <span class="s">"CJ대한통운"</span>
+  }
+]</code></pre>
+  </div>
+</div>
+
+<!-- 5.2 배송 상세 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/subscription/delivery/{id}</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">배송 상세 + 단계별 스텝퍼 (PENDING → MANUFACTURING → SHIPPING → DELIVERED)</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"deliveryId"</span>: <span class="n">5</span>,
+  <span class="k">"orderType"</span>: <span class="s">"AUTO"</span>,
+  <span class="k">"status"</span>: <span class="s">"SHIPPING"</span>,
+  <span class="k">"trackingNo"</span>: <span class="s">"1234567890"</span>,
+  <span class="k">"courier"</span>: <span class="s">"CJ대한통운"</span>,
+  <span class="k">"steps"</span>: [
+    { <span class="k">"step"</span>: <span class="s">"PENDING"</span>,       <span class="k">"completed"</span>: <span class="n">true</span> },
+    { <span class="k">"step"</span>: <span class="s">"MANUFACTURING"</span>, <span class="k">"completed"</span>: <span class="n">true</span> },
+    { <span class="k">"step"</span>: <span class="s">"SHIPPING"</span>,      <span class="k">"completed"</span>: <span class="n">true</span> },
+    { <span class="k">"step"</span>: <span class="s">"DELIVERED"</span>,     <span class="k">"completed"</span>: <span class="n">false</span> }
+  ]
+}</code></pre>
+  </div>
+</div>
+
+<!-- 5.3 수신자 실물 주문 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-post">POST</span>
+    <span class="path">/v1/subscription/delivery/recipient-order</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc"><strong>비회원 인증 불필요</strong> — 수신자가 포토북 뷰어에서 실물 주문 (shareToken 으로 본인 검증 후 PG 결제)</div>
+  <div class="api-body">
+    <div class="success-box">인증 헤더 불필요. shareToken 으로 포토북 확인.</div>
+    <div class="req-res">
+      <div>
+        <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"shareToken"</span>: <span class="s">"abc_share_token"</span>,
+  <span class="k">"recipientName"</span>: <span class="s">"홍길동"</span>,
+  <span class="k">"phone"</span>: <span class="s">"010-1234-5678"</span>,
+  <span class="k">"zipcode"</span>: <span class="s">"06000"</span>,
+  <span class="k">"address"</span>: <span class="s">"서울시 강남구 테헤란로 123"</span>,
+  <span class="k">"addressDetail"</span>: <span class="s">"101동 202호"</span>,
+  <span class="k">"pgBillingKey"</span>: <span class="s">"billing_recipient_xxx"</span>,
+  <span class="k">"amount"</span>: <span class="n">5900</span>
+}</code></pre>
+      </div>
+      <div>
+        <div class="label">📤 Response</div>
+<pre><code>{
+  <span class="k">"deliveryId"</span>: <span class="n">6</span>,
+  <span class="k">"orderType"</span>: <span class="s">"RECIPIENT_ORDER"</span>,
+  <span class="k">"status"</span>: <span class="s">"PENDING"</span>,
+  <span class="k">"trackingNo"</span>: <span class="s">null</span>,
+  <span class="k">"courier"</span>: <span class="s">null</span>
+}</code></pre>
+      </div>
+    </div>
+    <div class="info-box">처리 흐름: PG 결제 → DeliveryOrder 생성 → POD 파이프라인 발주 → podOrderId 저장</div>
+  </div>
+</div>
+
+<!-- ===== ⑥ 어드민 API ===== -->
+<div class="section-header" id="admin">
+  <div class="num">⑥</div>
+  <h2>어드민 API</h2>
+  <span class="count">2 구현 / 3 누락</span>
+</div>
+
+<!-- 6.1 어드민 배송 목록 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-get">GET</span>
+    <span class="path">/v1/admin/subscription/deliveries?status=SHIPPING&page=0&size=20</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">어드민: 전체 배송 목록 (상태/페이징 필터)</div>
+  <div class="api-body">
+    <div class="label">📤 Response</div>
+<pre><code>[
+  {
+    <span class="k">"deliveryId"</span>: <span class="n">5</span>,
+    <span class="k">"orderType"</span>: <span class="s">"AUTO"</span>,
+    <span class="k">"status"</span>: <span class="s">"SHIPPING"</span>,
+    <span class="k">"trackingNo"</span>: <span class="s">"1234567890"</span>,
+    <span class="k">"courier"</span>: <span class="s">"CJ대한통운"</span>
+  }
+]</code></pre>
+  </div>
+</div>
+
+<!-- 6.2 어드민 송장 입력 -->
+<div class="api">
+  <div class="api-header">
+    <span class="method method-patch">PATCH</span>
+    <span class="path">/v1/admin/subscription/deliveries/{id}/tracking</span>
+    <span class="status-pill badge badge-green">✅ 구현</span>
+  </div>
+  <div class="api-desc">어드민: 송장 정보 수동 입력 + 상태 변경</div>
+  <div class="api-body">
+    <div class="label">📥 Request</div>
+<pre><code>{
+  <span class="k">"courier"</span>: <span class="s">"CJ대한통운"</span>,
+  <span class="k">"trackingNo"</span>: <span class="s">"1234567890"</span>,
+  <span class="k">"status"</span>: <span class="s">"SHIPPING"</span>  <span class="c">// optional, DeliveryStatus enum</span>
+}</code></pre>
+  </div>
+</div>
+
+<!-- ===== 미구현 API ===== -->
+<div class="section-header" id="missing" style="background:linear-gradient(90deg,#dc2626 0%,#ef4444 100%);">
+  <div class="num">❌</div>
+  <h2>미구현 API (추가 필요)</h2>
+  <span class="count">4 API</span>
+</div>
+<div class="card">
+  <div class="danger-box">
+    아래 4개 API는 플랜에 명시되어 있으나 아직 구현되지 않았습니다. 기존 코드 재활용으로 1~2시간 내 추가 가능.
+  </div>
+
+  <div class="api" style="border-color:#fca5a5;">
+    <div class="api-header" style="background:#fef2f2;">
+      <span class="method method-get">GET</span>
+      <span class="path">/v1/subscription/share/history</span>
+      <span class="status-pill badge badge-red">❌ 미구현</span>
+    </div>
+    <div class="api-desc">회원의 <strong>전체 발송 이력</strong> 조회 (현재는 포토북별만 가능). 마이페이지 알림함 용도.</div>
+    <div class="api-body">
+      <div class="label">📤 예상 Response</div>
+<pre><code>[
+  { <span class="k">"historyId"</span>: <span class="n">1</span>, <span class="k">"photobookId"</span>: <span class="n">10</span>, <span class="k">"channel"</span>: <span class="s">"KAKAO"</span>, <span class="k">"status"</span>: <span class="s">"READ"</span>, <span class="k">"sentAt"</span>: <span class="s">"..."</span>, <span class="k">"readAt"</span>: <span class="s">"..."</span> },
+  ...
+]</code></pre>
+      <div class="info-box">구현 필요: <code>ShareHistoryRepository.findByMemberIdOrderBySentAtDesc</code> + Facade/Controller 메서드</div>
+    </div>
+  </div>
+
+  <div class="api" style="border-color:#fca5a5;">
+    <div class="api-header" style="background:#fef2f2;">
+      <span class="method method-get">GET</span>
+      <span class="path">/v1/admin/subscription</span>
+      <span class="status-pill badge badge-red">❌ 미구현</span>
+    </div>
+    <div class="api-desc">어드민: 구독자 목록 (검색·페이징) — memberId/status/planCode 필터</div>
+    <div class="api-body">
+      <div class="info-box"><code>SubscriptionRepositoryCustom.findByAdminSearch()</code> 은 이미 구현되어 있음. Facade/Controller만 추가하면 됨.</div>
+    </div>
+  </div>
+
+  <div class="api" style="border-color:#fca5a5;">
+    <div class="api-header" style="background:#fef2f2;">
+      <span class="method method-get">GET</span>
+      <span class="path">/v1/admin/subscription/{id}</span>
+      <span class="status-pill badge badge-red">❌ 미구현</span>
+    </div>
+    <div class="api-desc">어드민: 구독 상세 조회</div>
+  </div>
+
+  <div class="api" style="border-color:#fca5a5;">
+    <div class="api-header" style="background:#fef2f2;">
+      <span class="method method-patch">PATCH</span>
+      <span class="path">/v1/admin/subscription/{id}</span>
+      <span class="status-pill badge badge-red">❌ 미구현</span>
+    </div>
+    <div class="api-desc">어드민: 상태 수동 변경 (결제실패 복구, 강제 해지 등)</div>
+  </div>
+</div>
+
+<!-- ===== 제외된 배치 ===== -->
+<div class="section-header" style="background:linear-gradient(90deg,#64748b 0%,#94a3b8 100%);">
+  <div class="num">🕒</div>
+  <h2>제외된 배치 (별도 프로젝트 권장)</h2>
+  <span class="count">7 Job</span>
+</div>
+<div class="card">
+  <div class="warn-box">
+    플랜이 Spring Batch (Spring Boot 3.x 환경) 기반이므로, 현재 Spring MVC/Java 8 프로젝트에는 포함하지 않았습니다. 기존 <code>snaps-batch</code> 프로젝트 또는 신규 배치 전용 프로젝트에 구현 권장.
+  </div>
+  <table style="margin-top:12px;">
+    <tr><th>배치명</th><th>Cron</th><th>설명</th></tr>
+    <tr><td><code>monthlyBillingJob</code></td><td><code>0 0 9 1 * *</code></td><td>월정액 정기결제</td></tr>
+    <tr><td><code>photobookGenerationJob</code></td><td><code>0 0 10 1 * *</code></td><td>포토북 자동 생성 트리거</td></tr>
+    <tr><td><code>shareNotificationJob</code></td><td><code>0 0 11 1 * *</code></td><td>공유 알림 발송 (카카오/SMS)</td></tr>
+    <tr><td><code>deliveryOrderJob</code> (라이트)</td><td><code>0 0 12 1 * *</code></td><td>라이트 월별 실물 발주</td></tr>
+    <tr><td><code>deliveryOrderJob</code> (시즌)</td><td><code>0 0 9 1 3,6,9,12 *</code></td><td>시즌 분기 실물 발주</td></tr>
+    <tr><td><code>deliveryStatusSyncJob</code></td><td><code>0 0 6 * * *</code></td><td>POD 배송 상태 동기화</td></tr>
+    <tr><td><code>subscriptionStateJob</code></td><td><code>0 0 7 * * *</code></td><td>결제재시도·일시정지해제·만료처리</td></tr>
+  </table>
+</div>
+
+<!-- ===== 다음 단계 ===== -->
+<div class="section-header" id="next" style="background:linear-gradient(90deg,#059669 0%,#10b981 100%);">
+  <div class="num">🎯</div>
+  <h2>다음 단계 우선순위</h2>
+</div>
+<div class="card">
+  <h4 style="color:#dc2626;margin-bottom:8px;">🔴 P1 — 즉시</h4>
+  <ul style="padding-left:24px;margin-bottom:16px;">
+    <li><code>META-INF/sql/subscription/V1__subscription_schema.sql</code> 수동 실행 (10개 테이블)</li>
+    <li>Tomcat 재배포 → 빈 이름 충돌 해결된 상태로 정상 기동 확인</li>
+  </ul>
+
+  <h4 style="color:#ea580c;margin-bottom:8px;">🟠 P2 — API 완성도 (1~2시간)</h4>
+  <ul style="padding-left:24px;margin-bottom:16px;">
+    <li>어드민 구독 API 3개 추가 (Repository는 준비됨)</li>
+    <li>공유 전체 발송이력 API 추가</li>
+  </ul>
+
+  <h4 style="color:#ea580c;margin-bottom:8px;">🟠 P3 — 프로덕션 준비</h4>
+  <ul style="padding-left:24px;margin-bottom:16px;">
+    <li>PG 어댑터 실제 구현 (1차 PG사 결정 필요 — 협의 #7)</li>
+    <li>POD 파이프라인 어댑터 실제 구현</li>
+    <li>카카오 알림톡 + SMS fallback 실제 구현</li>
+    <li>어드민 권한 체크 AOP (<code>@AdminOnly</code>) 추가</li>
+  </ul>
+
+  <h4 style="color:#ca8a04;margin-bottom:8px;">🟡 P4 — 배치 (별도 프로젝트)</h4>
+  <ul style="padding-left:24px;margin-bottom:16px;">
+    <li><code>snaps-batch</code> 프로젝트에 7개 배치 잡 추가 (Spring Batch)</li>
+  </ul>
+
+  <h4 style="color:#16a34a;margin-bottom:8px;">🟢 P5 — 품질</h4>
+  <ul style="padding-left:24px;margin-bottom:16px;">
+    <li>JUnit4 기반 통합 테스트 작성</li>
+    <li>Gap 분석 리포트 (<code>/pdca analyze</code>)</li>
+  </ul>
+
+  <h4 style="color:#64748b;margin-bottom:8px;">❓ P6 — 미결정 협의 7건</h4>
+  <ol style="padding-left:24px;">
+    <li>정기결제 기준일 (가입일 vs 매월 1일)</li>
+    <li>포토북 생성 트리거 방식</li>
+    <li>배송 발주 방식 (자동 vs 고객 확인)</li>
+    <li>수신자 실물 주문 비회원 허용 여부</li>
+    <li>결제 실패 재시도 정책 (현재: D+1/D+3/D+5, 3회 초과 시 정지)</li>
+    <li>무료체험 전환 정책</li>
+    <li>1차 연동 PG사 선택</li>
+  </ol>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:24px 0;">
+  <hr style="margin-bottom:16px;border:none;border-top:1px solid var(--border);">
+  📄 이 문서는 <code>/Users/s-a-039/project/superPowers/docs/superpowers/plans/2026-04-13-snaps-subscription-backend.md</code> 플랜 기반으로 생성되었습니다.<br>
+  실제 구현 코드는 <code>snaps-service-api-v2</code> 프로젝트의 <code>com.snaps.backend.api.server.*.subscription</code> 패키지 참조.
+</div>
+
+</div><!-- /container -->
+
+</body>
+</html>
